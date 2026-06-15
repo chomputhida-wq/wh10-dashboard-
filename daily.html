@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📦 Dashboard ยอดส่งออกต่อวัน</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun','Segoe UI',Arial,sans-serif;font-size:14px;background:#f8fafc;color:#1e293b}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,#78350f 0%,#b45309 100%);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.header-icon{font-size:28px}
+.header-title{font-size:20px;font-weight:700;letter-spacing:.3px}
+.header-sub{font-size:12px;opacity:.75;margin-top:2px}
+.header-right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── Connection Banner ── */
+#conn-banner{padding:8px 16px;text-align:center;font-size:13px;font-weight:600;transition:all .3s}
+#conn-banner.ok{background:#dcfce7;color:#166534}
+#conn-banner.connecting{background:#fef3c7;color:#92400e}
+#conn-banner.error{background:#fee2e2;color:#991b1b}
+#conn-banner.nourl{background:#f1f5f9;color:#64748b}
+
+/* ── Buttons ── */
+.btn{padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:opacity .2s;white-space:nowrap}
+.btn:hover{opacity:.85}
+.btn-amber{background:#d97706;color:#fff}
+.btn-dark{background:#78350f;color:#fff;border:1px solid #fbbf24}
+.btn-green{background:#16a34a;color:#fff}
+.btn-red{background:#dc2626;color:#fff}
+.btn-ghost{background:transparent;border:1px solid #cbd5e1;color:#475569}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:2px solid #e2e8f0;background:#fff;padding:0 16px;overflow-x:auto}
+.tab-btn{padding:11px 18px;border:none;background:transparent;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;color:#64748b;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;white-space:nowrap}
+.tab-btn.active{color:#b45309;border-bottom-color:#b45309}
+.tab-btn:hover{color:#92400e}
+
+/* ── Tab Content ── */
+.tab-pane{display:none;padding:16px}
+.tab-pane.active{display:block}
+
+/* ── KPI Cards ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card.camber{border-top:4px solid #d97706}
+.card.cblue{border-top:4px solid #2563eb}
+.card.cgreen{border-top:4px solid #16a34a}
+.card.cred{border-top:4px solid #dc2626}
+.card-label{font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.card-val{font-size:26px;font-weight:800;color:#d97706;line-height:1.1}
+.card.cblue .card-val{color:#2563eb}
+.card.cgreen .card-val{color:#16a34a}
+.card.cred .card-val{color:#dc2626}
+.card-sub{font-size:11px;color:#94a3b8;margin-top:3px}
+
+/* ── Chart Cards ── */
+.chart-card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
+.chart-title{font-size:14px;font-weight:700;color:#334155;margin-bottom:12px}
+.chart-wrap{height:220px;position:relative}
+
+/* ── Date Range Filter Bar ── */
+.range-bar{background:#fff;border-radius:10px;padding:12px 16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.range-bar .range-label{font-size:13px;font-weight:600;color:#64748b;white-space:nowrap}
+.range-bar input[type=date]{padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;font-family:inherit;outline:none;width:145px}
+.range-bar input[type=date]:focus{border-color:#d97706}
+.quick-btn{padding:5px 11px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:#475569;white-space:nowrap;transition:all .15s}
+.quick-btn:hover,.quick-btn.on{background:#d97706;color:#fff;border-color:#d97706}
+.range-summary{font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 10px;font-weight:600;margin-left:auto;white-space:nowrap}
+
+/* ── Summary Table (Overview) ── */
+.sum-card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.sum-table{width:100%;border-collapse:collapse}
+.sum-table th{background:#78350f;color:#fff;padding:8px 12px;font-size:12px;font-weight:600;text-align:left}
+.sum-table td{padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px}
+.sum-table tr:hover td{background:#fffbf5}
+.sum-table .num{text-align:right}
+
+/* ── Form ── */
+.form-card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);max-width:880px}
+.section-title{font-size:15px;font-weight:700;color:#334155;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #fed7aa}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:18px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:12px;font-weight:600;color:#475569}
+.form-control{padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.form-control:focus{border-color:#d97706;box-shadow:0 0 0 2px rgba(217,119,6,.1)}
+.form-control[readonly]{background:#f8fafc;color:#b45309;font-weight:700}
+
+/* ── Vehicle Table ── */
+.veh-section{margin-bottom:20px}
+.veh-table{width:100%;border-collapse:collapse;max-width:600px}
+.veh-table th{background:#92400e;color:#fff;padding:8px 12px;font-size:12px;font-weight:600;text-align:left}
+.veh-table td{padding:7px 12px;border-bottom:1px solid #f1f5f9;font-size:13px}
+.veh-table tr:nth-child(even) td{background:#fffbf5}
+.veh-table tfoot td{background:#fff7ed;font-weight:700;color:#92400e}
+.veh-table input{width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:13px;font-family:inherit;text-align:right;outline:none}
+.veh-table input:focus{border-color:#d97706}
+
+/* ── History Table ── */
+.filter-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.filter-label{font-size:13px;color:#64748b;font-weight:600}
+.hist-wrap{overflow-x:auto;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.hist-table{width:100%;border-collapse:collapse;min-width:1100px}
+.hist-table th{background:#78350f;color:#fff;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;white-space:nowrap;position:sticky;top:0}
+.hist-table td{padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:13px;white-space:nowrap}
+.hist-table tr:hover td{background:#fffbf5}
+.hist-table .ctr{text-align:center}
+.hist-table .num{text-align:right}
+.hist-table .bold{font-weight:700;color:#d97706}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;max-width:90vw}
+#toast.show{opacity:1}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;color:#334155}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ── Responsive ── */
+@media(max-width:640px){
+  .header-title{font-size:16px}
+  .cards{grid-template-columns:1fr 1fr}
+  .card-val{font-size:20px}
+  .form-grid{grid-template-columns:1fr}
+}
+@media print{
+  #conn-banner,#toast,.tabs,.header-right,.filter-row .btn,
+  .btn-red,.btn-ghost,.btn-amber,.btn-dark{display:none!important}
+  .tab-pane{display:block!important;padding:8px}
+  #tab-entry,#tab-history{display:none!important}
+  .cards{grid-template-columns:repeat(4,1fr)}
+  .range-bar input,.quick-btn,.btn{display:none!important}
+  .range-bar{border:none;box-shadow:none;padding:4px 0;background:transparent}
+  .range-summary{display:inline-block!important;font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<div class="header">
+  <div class="header-icon">📦</div>
+  <div>
+    <div class="header-title">Dashboard ยอดส่งออกต่อวัน</div>
+    <div class="header-sub">รายงานสรุปจำนวนสินค้าส่งออก · อัตรากำลังคน · จำนวนปริมาณรถ</div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-dark" onclick="openGasModal()">⚙️ ตั้งค่า Sheets</button>
+    <button class="btn btn-amber" onclick="fetchFromSheets()">🔄 ดึงข้อมูล</button>
+    <button onclick="exportJSON()" style="background:#16a34a;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600">📤 Export JSON</button>
+    <button onclick="importJSON()" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600">📥 Import JSON</button>
+  </div>
+</div>
+
+<!-- ════════ CONNECTION BANNER ════════ -->
+<div id="conn-banner" class="nourl">⚙️ คลิกตั้งค่า Google Sheets เพื่อเริ่มใช้งาน</div>
+
+<!-- ════════ TABS ════════ -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('overview',this)">📊 ภาพรวม</button>
+  <button class="tab-btn" onclick="switchTab('entry',this)">📝 บันทึกข้อมูล</button>
+  <button class="tab-btn" onclick="switchTab('history',this)">📋 ประวัติข้อมูล</button>
+</div>
+
+<!-- ════════ TAB: ภาพรวม ════════ -->
+<div id="tab-overview" class="tab-pane active">
+
+  <!-- Date Range Filter -->
+  <div class="range-bar">
+    <span class="range-label">📅 ช่วงวันที่:</span>
+    <input type="date" id="ov-from" onchange="applyRange()">
+    <span style="font-size:13px;color:#94a3b8">ถึง</span>
+    <input type="date" id="ov-to" onchange="applyRange()">
+    <button class="quick-btn" onclick="setQuick('week',this)">สัปดาห์นี้</button>
+    <button class="quick-btn" onclick="setQuick('lastweek',this)">สัปดาห์ที่แล้ว</button>
+    <button class="quick-btn" onclick="setQuick('month',this)">เดือนนี้</button>
+    <button class="quick-btn" onclick="setQuick('all',this)">ทั้งหมด</button>
+    <span id="range-summary" class="range-summary" style="display:none"></span>
+    <button class="btn btn-ghost btn-sm" onclick="window.print()" style="margin-left:4px">🖨️ พิมพ์</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="cards">
+    <div class="card camber">
+      <div class="card-label" id="lbl-qty">รวมส่งออก (ช่วงที่เลือก)</div>
+      <div class="card-val" id="kpi-today">–</div>
+      <div class="card-sub">ชิ้น / หน่วย</div>
+    </div>
+    <div class="card cblue">
+      <div class="card-label" id="lbl-shopee">Shopee / Lazada</div>
+      <div class="card-val" id="kpi-week">–</div>
+      <div class="card-sub">ชิ้น / หน่วย</div>
+    </div>
+    <div class="card cgreen">
+      <div class="card-label" id="lbl-cases">รวมลัง (ช่วงที่เลือก)</div>
+      <div class="card-val" id="kpi-month">–</div>
+      <div class="card-sub">ลัง</div>
+    </div>
+    <div class="card cred">
+      <div class="card-label" id="lbl-cost">ค่าใช้จ่ายรวม</div>
+      <div class="card-val" id="kpi-cost">–</div>
+      <div class="card-sub">บาท</div>
+    </div>
+  </div>
+
+  <!-- Line Chart -->
+  <div class="chart-card">
+    <div class="chart-title" id="line-chart-title">📈 ยอดส่งออกรายวัน</div>
+    <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+  </div>
+
+  <!-- Bar Chart -->
+  <div class="chart-card">
+    <div class="chart-title" id="bar-chart-title">🚚 รวมลังตามประเภทรถ</div>
+    <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+  </div>
+
+  <!-- Recent Records Summary -->
+  <div class="sum-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="chart-title" id="recent-title" style="margin-bottom:0">📋 รายการในช่วงที่เลือก</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="sum-table">
+        <thead>
+          <tr>
+            <th>วันที่</th>
+            <th class="num">ส่งออก</th>
+            <th class="num">Shopee/Lazada</th>
+            <th class="num">รถป็อบ<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">รถ6ล้อกลาง<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">รถ6ล้อใหญ่<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">รับจ้างในประเทศ<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">รับจ้างต่างประเทศ<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">ขนส่งมารับเอง<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">ตู้นอกมารับ<br><span style="font-weight:400;opacity:.75">(เที่ยว/ลัง)</span></th>
+            <th class="num">ค่าใช้จ่าย (บาท)</th>
+            <th class="num">รวมลัง</th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody">
+          <tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีข้อมูล</td></tr>
+        </tbody>
+        <tfoot id="recent-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TAB: บันทึกข้อมูล ════════ -->
+<div id="tab-entry" class="tab-pane">
+  <div class="form-card">
+    <div class="section-title" id="form-mode-title">📝 บันทึกข้อมูลประจำวัน</div>
+    <input type="hidden" id="edit-id">
+
+    <!-- Row 1: วันที่ + ส่งออก + Shopee -->
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">📅 วันที่ *</label>
+        <input type="date" id="f-date" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📦 จำนวนสินค้าที่ส่งออก</label>
+        <input type="number" id="f-qty" class="form-control" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🛒 Shopee / Lazada</label>
+        <input type="number" id="f-shopee" class="form-control" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <!-- Row 2: ค่าใช้จ่าย -->
+    <div class="section-title" style="font-size:14px;margin-bottom:12px">💰 ค่าใช้จ่าย</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">ค่าเบี้ยเลี้ยง (บาท)</label>
+        <input type="number" id="f-allowance" class="form-control" placeholder="0" min="0" oninput="calcTotalCost()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ค่าจอดรถ + ทางด่วน + พาเลท (บาท)</label>
+        <input type="number" id="f-parking" class="form-control" placeholder="0" min="0" oninput="calcTotalCost()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ค่าขนส่งเงินสด (บาท)</label>
+        <input type="number" id="f-cash" class="form-control" placeholder="0" min="0" oninput="calcTotalCost()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">รวมค่าใช้จ่าย (บาท)</label>
+        <input type="number" id="f-total-cost" class="form-control" placeholder="0" readonly>
+      </div>
+    </div>
+
+    <!-- Row 3: ประเภทรถ -->
+    <div class="veh-section">
+      <div class="section-title" style="font-size:14px;margin-bottom:10px">🚚 จำนวนรถและลัง</div>
+      <table class="veh-table">
+        <thead>
+          <tr>
+            <th style="width:200px">ประเภทรถ</th>
+            <th style="width:130px">จำนวนเที่ยว</th>
+            <th style="width:130px">จำนวนลัง</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>รถป็อบ</td>
+            <td><input type="number" id="v-pop-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-pop-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>รถ 6 ล้อกลาง</td>
+            <td><input type="number" id="v-m6-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-m6-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>รถ 6 ล้อใหญ่</td>
+            <td><input type="number" id="v-l6-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-l6-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>รถรับจ้างในประเทศ</td>
+            <td><input type="number" id="v-dom-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-dom-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>รถรับจ้างต่างประเทศ</td>
+            <td><input type="number" id="v-intl-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-intl-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>ขนส่งมารับเอง</td>
+            <td><input type="number" id="v-self-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-self-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+          <tr>
+            <td>ตู้นอกมารับ</td>
+            <td><input type="number" id="v-ext-t" placeholder="0" min="0" oninput="calcCases()"></td>
+            <td><input type="number" id="v-ext-c" placeholder="0" min="0" oninput="calcCases()"></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>รวมลังทั้งหมด</td>
+            <td></td>
+            <td id="v-total-cases" style="text-align:right;font-size:15px">0 ลัง</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Form Actions -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-amber" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
+      <button class="btn btn-ghost" onclick="clearForm()">🗑️ ล้างฟอร์ม</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TAB: ประวัติข้อมูล ════════ -->
+<div id="tab-history" class="tab-pane">
+  <div class="filter-row">
+    <span class="filter-label">กรองเดือน:</span>
+    <input type="month" id="filter-month" class="form-control" style="width:170px" onchange="buildHistory()">
+    <button class="btn btn-ghost" onclick="clearMonthFilter()">ทั้งหมด</button>
+    <button class="btn btn-amber" onclick="switchTab('entry',document.querySelectorAll(\'.tab-btn\')[1])" style="margin-left:auto">
+      ➕ เพิ่มข้อมูลใหม่
+    </button>
+    <button class="btn btn-ghost" onclick="exportCSV()">📥 ส่งออก CSV</button>
+    <button class="btn btn-ghost" onclick="exportJSON()" style="background:#16a34a;color:#fff">📤 Export JSON</button>
+    <button class="btn btn-ghost" onclick="importJSON()" style="background:#7c3aed;color:#fff">📥 Import JSON</button>
+  </div>
+  <div class="hist-wrap">
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>วันที่</th>
+          <th class="num">ส่งออก</th>
+          <th class="num">Shopee/<br>Lazada</th>
+          <th class="num">ค่าใช้จ่าย<br>รวม (บาท)</th>
+          <th class="num">รถป็อบ<br>(เที่ยว/ลัง)</th>
+          <th class="num">รถ6ล้อกลาง<br>(เที่ยว/ลัง)</th>
+          <th class="num">รถ6ล้อใหญ่<br>(เที่ยว/ลัง)</th>
+          <th class="num">รับจ้าง<br>ในประเทศ</th>
+          <th class="num">รับจ้าง<br>ต่างประเทศ</th>
+          <th class="num">ขนส่งมา<br>รับเอง</th>
+          <th class="num">ตู้นอก<br>มารับ</th>
+          <th class="num">รวมลัง</th>
+          <th class="ctr">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="hist-tbody">
+        <tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:28px">ยังไม่มีข้อมูล</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="hist-summary" style="margin-top:12px"></div>
+</div>
+
+<!-- ════════ TOAST ════════ -->
+<div id="toast"></div>
+
+<!-- ════════ GAS MODAL ════════ -->
+<div class="modal-bg" id="gas-modal">
+  <div class="modal">
+    <div class="modal-title">⚙️ ตั้งค่า Google Sheets</div>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px">
+      วาง Google Apps Script Web App URL ที่นี่ เพื่อบันทึกข้อมูลไปยัง Google Sheets อัตโนมัติ
+    </p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Apps Script Web App URL</label>
+      <input type="text" id="gas-url-input" class="form-control" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <div style="background:#fef3c7;border-radius:6px;padding:10px 12px;font-size:12px;color:#92400e">
+      💡 ดู <b>GAS_Code_ยอดออกต่อวัน.gs</b> สำหรับโค้ด Google Apps Script ที่ต้องตั้งค่า
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeGasModal()">ยกเลิก</button>
+      <button class="btn btn-amber" onclick="saveGasUrl()">💾 บันทึก URL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════ -->
+<script>
+// ── Auto-restore embedded records ──
+(function(){
+  try {
+    var embedded = [{"id": "rec1748000000x0000", "date": "2026-06-12", "qty": 316, "shopee": 308, "allowance": 4705, "parking": 0, "cashDelivery": 0, "totalCost": 4705, "popTrips": 7, "popCases": 653, "m6Trips": 1, "m6Cases": 145, "l6Trips": 1, "l6Cases": 392, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 31, "selfCases": 15746, "extTrips": 2, "extCases": 2461, "totalCases": 19397, "savedAt": "2026-06-12T00:00:00.000Z"}, {"id": "rec1748001000x0001", "date": "2026-06-11", "qty": 11810, "shopee": 336, "allowance": 4880, "parking": 0, "cashDelivery": 0, "totalCost": 4880, "popTrips": 9, "popCases": 692.5, "m6Trips": 0, "m6Cases": 0, "l6Trips": 2, "l6Cases": 894, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 13, "selfCases": 9883, "extTrips": 0, "extCases": 0, "totalCases": 11469.5, "savedAt": "2026-06-11T00:00:00.000Z"}, {"id": "rec1748002000x0002", "date": "2026-06-10", "qty": 29398, "shopee": 305, "allowance": 64932, "parking": 0, "cashDelivery": 0, "totalCost": 64932, "popTrips": 12, "popCases": 1085, "m6Trips": 2, "m6Cases": 464, "l6Trips": 2, "l6Cases": 827, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 21, "selfCases": 24130, "extTrips": 1, "extCases": 2587, "totalCases": 29398, "savedAt": "2026-06-10T00:00:00.000Z"}, {"id": "rec1748003000x0003", "date": "2026-06-09", "qty": 20786, "shopee": 400, "allowance": 5850, "parking": 0, "cashDelivery": 0, "totalCost": 5850, "popTrips": 5, "popCases": 375, "m6Trips": 2, "m6Cases": 350, "l6Trips": 2, "l6Cases": 714, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 28, "selfCases": 16432, "extTrips": 2, "extCases": 2515, "totalCases": 20786, "savedAt": "2026-06-09T00:00:00.000Z"}, {"id": "rec1748004000x0004", "date": "2026-06-08", "qty": 20554, "shopee": 2358, "allowance": 3555, "parking": 0, "cashDelivery": 0, "totalCost": 3555, "popTrips": 7, "popCases": 743, "m6Trips": 0, "m6Cases": 0, "l6Trips": 1, "l6Cases": 369, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 18, "selfCases": 17084, "extTrips": 0, "extCases": 0, "totalCases": 20554, "savedAt": "2026-06-08T00:00:00.000Z"}, {"id": "rec1748005000x0005", "date": "2026-06-06", "qty": 10763, "shopee": 136, "allowance": 5240, "parking": 0, "cashDelivery": 0, "totalCost": 5240, "popTrips": 8, "popCases": 486, "m6Trips": 2, "m6Cases": 326, "l6Trips": 0, "l6Cases": 0, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 13, "selfCases": 9815, "extTrips": 0, "extCases": 0, "totalCases": 10763, "savedAt": "2026-06-06T00:00:00.000Z"}, {"id": "rec1748006000x0006", "date": "2026-06-05", "qty": 30178, "shopee": 736, "allowance": 4883, "parking": 0, "cashDelivery": 0, "totalCost": 4883, "popTrips": 5, "popCases": 454, "m6Trips": 2, "m6Cases": 482, "l6Trips": 2, "l6Cases": 1270, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 36, "selfCases": 22368, "extTrips": 2, "extCases": 4868, "totalCases": 30178, "savedAt": "2026-06-05T00:00:00.000Z"}, {"id": "rec1748007000x0007", "date": "2026-06-04", "qty": 22639, "shopee": 1155, "allowance": 6055, "parking": 0, "cashDelivery": 0, "totalCost": 6055, "popTrips": 6, "popCases": 369, "m6Trips": 3, "m6Cases": 831, "l6Trips": 1, "l6Cases": 609, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 18, "selfCases": 18715, "extTrips": 1, "extCases": 960, "totalCases": 22639, "savedAt": "2026-06-04T00:00:00.000Z"}, {"id": "rec1748008000x0008", "date": "2026-06-03", "qty": 40473, "shopee": 727, "allowance": 4055, "parking": 0, "cashDelivery": 0, "totalCost": 4055, "popTrips": 7, "popCases": 631, "m6Trips": 1, "m6Cases": 100, "l6Trips": 0, "l6Cases": 0, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 23, "selfCases": 33616, "extTrips": 2, "extCases": 5399, "totalCases": 40473, "savedAt": "2026-06-03T00:00:00.000Z"}, {"id": "rec1748009000x0009", "date": "2026-06-02", "qty": 28989, "shopee": 886, "allowance": 5590, "parking": 0, "cashDelivery": 0, "totalCost": 5590, "popTrips": 6, "popCases": 561, "m6Trips": 2, "m6Cases": 460, "l6Trips": 1, "l6Cases": 531, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 17, "selfCases": 19978, "extTrips": 3, "extCases": 6573, "totalCases": 28989, "savedAt": "2026-06-02T00:00:00.000Z"}, {"id": "rec1748010000x000a", "date": "2026-06-01", "qty": 9125, "shopee": 0, "allowance": 0, "parking": 0, "cashDelivery": 0, "totalCost": 0, "popTrips": 0, "popCases": 0, "m6Trips": 0, "m6Cases": 0, "l6Trips": 0, "l6Cases": 0, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 6, "selfCases": 9125, "extTrips": 0, "extCases": 0, "totalCases": 9125, "savedAt": "2026-06-01T00:00:00.000Z"}, {"id": "rec1748011000x000b", "date": "2026-05-30", "qty": 18856, "shopee": 64, "allowance": 5435, "parking": 0, "cashDelivery": 0, "totalCost": 5435, "popTrips": 5, "popCases": 393, "m6Trips": 2, "m6Cases": 626, "l6Trips": 3, "l6Cases": 2385, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 17, "selfCases": 15388, "extTrips": 0, "extCases": 0, "totalCases": 18856, "savedAt": "2026-05-30T00:00:00.000Z"}, {"id": "rec1748012000x000c", "date": "2026-05-29", "qty": 20063, "shopee": 294, "allowance": 6153, "parking": 0, "cashDelivery": 0, "totalCost": 6153, "popTrips": 7, "popCases": 490, "m6Trips": 2, "m6Cases": 567, "l6Trips": 1, "l6Cases": 593, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 31, "selfCases": 16789, "extTrips": 1, "extCases": 1330, "totalCases": 20063, "savedAt": "2026-05-29T00:00:00.000Z"}, {"id": "rec1748013000x000d", "date": "2026-05-28", "qty": 25636, "shopee": 252, "allowance": 6045, "parking": 0, "cashDelivery": 0, "totalCost": 6045, "popTrips": 8, "popCases": 740, "m6Trips": 3, "m6Cases": 525, "l6Trips": 1, "l6Cases": 362, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 20, "selfCases": 18749, "extTrips": 2, "extCases": 5008, "totalCases": 25636, "savedAt": "2026-05-28T00:00:00.000Z"}, {"id": "rec1748014000x000e", "date": "2026-05-27", "qty": 33019, "shopee": 316, "allowance": 5805, "parking": 0, "cashDelivery": 0, "totalCost": 5805, "popTrips": 9, "popCases": 839, "m6Trips": 2, "m6Cases": 497, "l6Trips": 0, "l6Cases": 0, "domTrips": 0, "domCases": 0, "intlTrips": 0, "intlCases": 0, "selfTrips": 23, "selfCases": 28728, "extTrips": 1, "extCases": 2639, "totalCases": 33019, "savedAt": "2026-05-27T00:00:00.000Z"}];
+    var existing = localStorage.getItem('daily_export_v1');
+    var parsed = existing ? JSON.parse(existing) : [];
+    // Use embedded if it has more records
+    if (!parsed || parsed.length < embedded.length) {
+      localStorage.setItem('daily_export_v1', JSON.stringify(embedded));
+    }
+  } catch(e) {}
+})();
+
+// ──────────────────────────────────────
+// Constants & State
+// ──────────────────────────────────────
+var LS_KEY = 'daily_export_v1';
+var LS_GAS = 'daily_export_gas_url';
+var records = [];
+var lineChartInst = null;
+var barChartInst = null;
+
+// Vehicle keys
+var VEH_KEYS = ['pop','m6','l6','dom','intl','self','ext'];
+var VEH_LABELS = ['รถป็อบ','รถ6ล้อกลาง','รถ6ล้อใหญ่','รับจ้างในประเทศ','รับจ้างต่างประเทศ','ขนส่งมารับเอง','ตู้นอกมารับ'];
+var VEH_COLORS = ['#f59e0b','#3b82f6','#8b5cf6','#10b981','#ef4444','#06b6d4','#ec4899'];
+
+// ──────────────────────────────────────
+// Utility
+// ──────────────────────────────────────
+function el(id) { return document.getElementById(id); }
+function numVal(id) { return parseFloat(el(id).value) || 0; }
+function fmt(v) {
+  if (v === null || v === undefined || v === '') return '–';
+  return (+v).toLocaleString('th-TH');
+}
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function normalizeDate(d) {
+  // Convert any date format to YYYY-MM-DD local date
+  if (!d) return '';
+  if (typeof d === 'string') {
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    // ISO string like 2026-06-11T17:00:00.000Z → parse as local
+    var dt = new Date(d);
+    if (!isNaN(dt)) {
+      // Use local date parts
+      return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+    }
+  }
+  if (d instanceof Date) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  return String(d).slice(0, 10);
+}
+
+
+function showToast(msg, dur) {
+  var t = el('toast');
+  t.textContent = msg;
+  t.className = 'show';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function () { t.className = ''; }, dur || 2800);
+}
+
+// ──────────────────────────────────────
+// Local Storage
+// ──────────────────────────────────────
+function loadLocal() {
+  try {
+    var d = localStorage.getItem(LS_KEY);
+    if (d) records = JSON.parse(d);
+  } catch (e) {}
+}
+
+function saveLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(records)); } catch (e) {}
+}
+
+// ──────────────────────────────────────
+// GAS URL
+// ──────────────────────────────────────
+function getGasUrl() {
+  try { return localStorage.getItem(LS_GAS) || ''; } catch (e) { return ''; }
+}
+
+function openGasModal() {
+  el('gas-url-input').value = getGasUrl();
+  el('gas-modal').classList.add('open');
+}
+function closeGasModal() { el('gas-modal').classList.remove('open'); }
+
+function saveGasUrl() {
+  var v = el('gas-url-input').value.trim();
+  try {
+    if (v) localStorage.setItem(LS_GAS, v);
+    else localStorage.removeItem(LS_GAS);
+  } catch (e) {}
+  closeGasModal();
+  if (v) {
+    showToast('✅ บันทึก URL แล้วค่ะ กำลังเชื่อมต่อ...', 3000);
+    setTimeout(testConnection, 500);
+  } else {
+    updateBanner();
+  }
+}
+
+// ──────────────────────────────────────
+// Connection Banner
+// ──────────────────────────────────────
+function updateBanner(state, msg) {
+  var b = el('conn-banner');
+  state = state || 'nourl';
+  b.className = state;
+  if (msg) { b.textContent = msg; return; }
+  var msgs = {
+    nourl: '⚙️ คลิกตั้งค่า Google Sheets เพื่อเริ่มใช้งาน',
+    connecting: '⏳ กำลังเชื่อมต่อ Google Sheets...',
+    ok: '✅ เชื่อมต่อ Google Sheets แล้ว',
+    error: '❌ เชื่อมต่อไม่ได้ — ตรวจสอบ URL อีกครั้ง'
+  };
+  b.textContent = msgs[state] || msgs.nourl;
+}
+
+function testConnection() {
+  var url = getGasUrl();
+  if (!url) { updateBanner('nourl'); return; }
+  updateBanner('connecting');
+  fetch(url + '?action=fetch_daily')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var label = d && d.count ? ' (' + d.count + ' รายการ)' : '';
+      updateBanner('ok', '✅ เชื่อมต่อ Google Sheets แล้ว' + label);
+      if (d && d.rows && d.rows.length) mergeSheetData(d.rows);
+    })
+    .catch(function () {
+      updateBanner('ok', '✅ Google Sheets พร้อมใช้งาน');
+    });
+}
+
+// ──────────────────────────────────────
+// Sheets Sync
+// ──────────────────────────────────────
+function mergeSheetData(rows) {
+  rows = rows.map(function(r) { r.date = normalizeDate(r.date); return r; });
+  var idMap = {};
+  records.forEach(function (r) { idMap[r.id] = true; });
+  var added = 0;
+  rows.forEach(function (row) {
+    if (!row.id) return;
+    if (idMap[row.id]) {
+      // Update existing
+      var idx = records.findIndex(function (r) { return r.id === row.id; });
+      if (idx >= 0) records[idx] = row;
+    } else {
+      records.push(row);
+      idMap[row.id] = true;
+      added++;
+    }
+  });
+  records.sort(function (a, b) { return a.date.localeCompare(b.date); });
+  saveLocal();
+  refreshAll();
+  if (added) showToast('✅ ดึงข้อมูลใหม่ ' + added + ' รายการ');
+}
+
+function fetchFromSheets() {
+  var url = getGasUrl();
+  if (!url) { showToast('⚠️ กรุณาตั้งค่า Google Sheets ก่อนค่ะ'); return; }
+  showToast('⏳ กำลังดึงข้อมูล...', 5000);
+  fetch(url + '?action=fetch_daily')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.rows) {
+        // Merge: don't overwrite local records that aren't in Sheets
+        var sheetRows = d.rows.map(function(r) { r.date = normalizeDate(r.date); return r; });
+        var idMap = {};
+        sheetRows.forEach(function(r){ idMap[r.id] = true; });
+        // Keep local records not in Sheets
+        records.forEach(function(r){
+          if (!idMap[r.id]) { sheetRows.push(r); }
+        });
+        sheetRows.sort(function(a,b){ return a.date.localeCompare(b.date); });
+        records = sheetRows;
+        saveLocal();
+        refreshAll();
+        updateBanner('ok', '✅ อัปเดตข้อมูล ' + records.length + ' รายการแล้ว');
+        showToast('✅ ดึงข้อมูลสำเร็จ ' + records.length + ' รายการ');
+      }
+    })
+    .catch(function (e) {
+      showToast('❌ เชื่อมต่อไม่ได้: ' + e.message);
+    });
+}
+
+function pushToSheets(rec) {
+  var url = getGasUrl();
+  if (!url) return;
+  fetch(url + '?action=save_daily&data=' + encodeURIComponent(JSON.stringify(rec))).catch(function () {});
+}
+
+function deleteFromSheets(id) {
+  var url = getGasUrl();
+  if (!url) return;
+  fetch(url + '?action=delete_daily&id=' + encodeURIComponent(id)).catch(function () {});
+}
+
+// ──────────────────────────────────────
+// Form Logic
+// ──────────────────────────────────────
+function calcTotalCost() {
+  var t = numVal('f-allowance') + numVal('f-parking') + numVal('f-cash');
+  el('f-total-cost').value = t || '';
+}
+
+function calcCases() {
+  var total = VEH_KEYS.reduce(function (s, k) {
+    return s + (parseFloat(el('v-' + k + '-c').value) || 0);
+  }, 0);
+  el('v-total-cases').textContent = total.toLocaleString('th-TH') + ' ลัง';
+}
+
+function clearForm() {
+  el('edit-id').value = '';
+  el('form-mode-title').textContent = '📝 บันทึกข้อมูลประจำวัน';
+  el('f-date').value = todayStr();
+  ['f-qty','f-shopee','f-allowance','f-parking','f-cash','f-total-cost'].forEach(function (id) {
+    el(id).value = '';
+  });
+  VEH_KEYS.forEach(function (k) {
+    el('v-' + k + '-t').value = '';
+    el('v-' + k + '-c').value = '';
+  });
+  el('v-total-cases').textContent = '0 ลัง';
+}
+
+function fillForm(rec) {
+  el('edit-id').value = rec.id;
+  el('form-mode-title').textContent = '✏️ แก้ไขข้อมูล ' + rec.date;
+  el('f-date').value = rec.date;
+  el('f-qty').value = rec.qty || '';
+  el('f-shopee').value = rec.shopee || '';
+  el('f-allowance').value = rec.allowance || '';
+  el('f-parking').value = rec.parking || '';
+  el('f-cash').value = rec.cashDelivery || '';
+  el('f-total-cost').value = rec.totalCost || '';
+  VEH_KEYS.forEach(function (k) {
+    el('v-' + k + '-t').value = rec[k + 'Trips'] || '';
+    el('v-' + k + '-c').value = rec[k + 'Cases'] || '';
+  });
+  calcCases();
+  switchTab('entry', document.querySelectorAll('.tab-btn')[1]);
+  window.scrollTo(0, 0);
+}
+
+function saveRecord() {
+  var date = el('f-date').value;
+  if (!date) { showToast('⚠️ กรุณาเลือกวันที่ก่อนค่ะ'); return; }
+
+  var editId = el('edit-id').value;
+  var totalCases = VEH_KEYS.reduce(function (s, k) {
+    return s + (parseFloat(el('v-' + k + '-c').value) || 0);
+  }, 0);
+  var totalCost = numVal('f-allowance') + numVal('f-parking') + numVal('f-cash');
+
+  var rec = {
+    id: editId || genId(),
+    date: date,
+    qty: numVal('f-qty'),
+    shopee: numVal('f-shopee'),
+    allowance: numVal('f-allowance'),
+    parking: numVal('f-parking'),
+    cashDelivery: numVal('f-cash'),
+    totalCost: totalCost,
+    popTrips: numVal('v-pop-t'), popCases: numVal('v-pop-c'),
+    m6Trips:  numVal('v-m6-t'),  m6Cases:  numVal('v-m6-c'),
+    l6Trips:  numVal('v-l6-t'),  l6Cases:  numVal('v-l6-c'),
+    domTrips: numVal('v-dom-t'), domCases: numVal('v-dom-c'),
+    intlTrips:numVal('v-intl-t'),intlCases:numVal('v-intl-c'),
+    selfTrips:numVal('v-self-t'),selfCases:numVal('v-self-c'),
+    extTrips: numVal('v-ext-t'), extCases: numVal('v-ext-c'),
+    totalCases: totalCases,
+    savedAt: new Date().toISOString()
+  };
+
+  if (editId) {
+    var idx = records.findIndex(function (r) { return r.id === editId; });
+    if (idx >= 0) records[idx] = rec; else records.push(rec);
+  } else {
+    records.push(rec);
+  }
+
+  records.sort(function (a, b) { return a.date.localeCompare(b.date); });
+  saveLocal();
+  pushToSheets(rec);
+  refreshAll();
+  clearForm();
+  showToast('✅ บันทึกข้อมูลสำเร็จค่ะ');
+  switchTab('history', document.querySelectorAll('.tab-btn')[2]);
+}
+
+// ──────────────────────────────────────
+// History Table
+// ──────────────────────────────────────
+function clearMonthFilter() {
+  el('filter-month').value = '';
+  buildHistory();
+}
+
+function buildHistory() {
+  var filter = el('filter-month').value;
+  var rows = records.filter(function (r) { return !filter || r.date.startsWith(filter); });
+  var sorted = rows.slice().reverse();
+  var tb = el('hist-tbody');
+
+  if (!sorted.length) {
+    tb.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:28px">ยังไม่มีข้อมูล</td></tr>';
+    el('hist-summary').innerHTML = '';
+    return;
+  }
+
+  tb.innerHTML = sorted.map(function (r) {
+    var vcells = VEH_KEYS.map(function (k) {
+      var t = r[k + 'Trips'] || 0, c = r[k + 'Cases'] || 0;
+      if (!t && !c) return '<td class="num" style="color:#cbd5e1">–</td>';
+      return '<td class="num">' + (t ? t + '/' : '') + c + '</td>';
+    }).join('');
+
+    return '<tr>' +
+      '<td>' + r.date + '</td>' +
+      '<td class="num">' + fmt(r.qty) + '</td>' +
+      '<td class="num">' + fmt(r.shopee) + '</td>' +
+      '<td class="num">' + fmt(r.totalCost) + '</td>' +
+      vcells +
+      '<td class="num bold">' + fmt(r.totalCases) + '</td>' +
+      '<td class="ctr">' +
+        '<button class="btn btn-ghost btn-sm" onclick="fillForm(getRecord(\'' + r.id + '\'))">✏️</button> ' +
+        '<button class="btn btn-red btn-sm" onclick="deleteRecord(\'' + r.id + '\')">🗑️</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  // Summary row
+  var totQty   = rows.reduce(function (s, r) { return s + (r.qty || 0); }, 0);
+  var totCost  = rows.reduce(function (s, r) { return s + (r.totalCost || 0); }, 0);
+  var totCases = rows.reduce(function (s, r) { return s + (r.totalCases || 0); }, 0);
+  var totShopee= rows.reduce(function (s, r) { return s + (r.shopee || 0); }, 0);
+
+  el('hist-summary').innerHTML =
+    '<div style="background:#fff7ed;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;color:#92400e;display:flex;gap:24px;flex-wrap:wrap">' +
+    '<span>รวม ' + rows.length + ' วัน</span>' +
+    '<span>ส่งออกรวม: <b>' + fmt(totQty) + '</b> ชิ้น</span>' +
+    '<span>Shopee/Lazada: <b>' + fmt(totShopee) + '</b></span>' +
+    '<span>ค่าใช้จ่ายรวม: <b>' + fmt(totCost) + '</b> บาท</span>' +
+    '<span>รวมลังทั้งหมด: <b>' + fmt(totCases) + '</b> ลัง</span>' +
+    '</div>';
+}
+
+function getRecord(id) {
+  return records.find(function (r) { return r.id === id; });
+}
+
+function deleteRecord(id) {
+  if (!confirm('ต้องการลบข้อมูลนี้ใช่ไหมคะ?')) return;
+  records = records.filter(function (r) { return r.id !== id; });
+  saveLocal();
+  deleteFromSheets(id);
+  refreshAll();
+  showToast('🗑️ ลบข้อมูลแล้วค่ะ');
+}
+
+// ──────────────────────────────────────
+// Date Range Filter
+// ──────────────────────────────────────
+var rangeFrom = '';
+var rangeTo   = '';
+
+function getRangeRecords() {
+  return records.filter(function (r) {
+    if (rangeFrom && r.date < rangeFrom) return false;
+    if (rangeTo   && r.date > rangeTo)   return false;
+    return true;
+  });
+}
+
+function setQuick(mode, btn) {
+  document.querySelectorAll('.quick-btn').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  var now = new Date();
+  var tod = todayStr();
+  if (mode === 'week') {
+    var dw = now.getDay(); var diff = dw === 0 ? -6 : 1 - dw;
+    var ws = new Date(now); ws.setDate(now.getDate() + diff);
+    rangeFrom = ws.toISOString().slice(0,10); rangeTo = tod;
+  } else if (mode === 'lastweek') {
+    var dw2 = now.getDay(); var diff2 = dw2 === 0 ? -6 : 1 - dw2;
+    var we = new Date(now); we.setDate(now.getDate() + diff2 - 1);
+    var ws2 = new Date(we); ws2.setDate(we.getDate() - 6);
+    rangeFrom = ws2.toISOString().slice(0,10); rangeTo = we.toISOString().slice(0,10);
+  } else if (mode === 'month') {
+    rangeFrom = tod.slice(0,7) + '-01'; rangeTo = tod;
+  } else {
+    rangeFrom = ''; rangeTo = '';
+  }
+  el('ov-from').value = rangeFrom;
+  el('ov-to').value   = rangeTo;
+  updateRangeSummary();
+  buildOverview();
+}
+
+function applyRange() {
+  rangeFrom = el('ov-from').value;
+  rangeTo   = el('ov-to').value;
+  document.querySelectorAll('.quick-btn').forEach(function(b){ b.classList.remove('on'); });
+  updateRangeSummary();
+  buildOverview();
+}
+
+function updateRangeSummary() {
+  var rs = el('range-summary');
+  if (rangeFrom || rangeTo) {
+    var txt = (rangeFrom || '…') + ' ถึง ' + (rangeTo || '…');
+    rs.textContent = txt;
+    rs.style.display = '';
+  } else {
+    rs.style.display = 'none';
+  }
+}
+
+function buildOverview() {
+  buildKPI();
+  buildRecent();
+  buildCharts();
+}
+
+// ──────────────────────────────────────
+// KPI Cards
+// ──────────────────────────────────────
+function buildKPI() {
+  var recs = getRangeRecords();
+  var totQty   = recs.reduce(function(s,r){ return s+(r.qty||0); },0);
+  var totShopee= recs.reduce(function(s,r){ return s+(r.shopee||0); },0);
+  var totCases = recs.reduce(function(s,r){ return s+(r.totalCases||0); },0);
+  var totCost  = recs.reduce(function(s,r){ return s+(r.totalCost||0); },0);
+  el('kpi-today').textContent = fmt(totQty);
+  el('kpi-week').textContent  = fmt(totShopee);
+  el('kpi-month').textContent = fmt(totCases);
+  el('kpi-cost').textContent  = fmt(totCost);
+}
+
+// ──────────────────────────────────────
+// Recent Records (Overview)
+// ──────────────────────────────────────
+function buildRecent() {
+  var rows = getRangeRecords().slice().reverse();
+  var tb = el('recent-tbody');
+  var colspan = 12;
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="'+colspan+'" style="text-align:center;color:#94a3b8;padding:20px">ยังไม่มีข้อมูลในช่วงที่เลือก</td></tr>';
+    el('recent-tfoot').innerHTML = '';
+    return;
+  }
+  tb.innerHTML = rows.map(function (r) {
+    function vc(k){ var t=r[k+'Trips']||0,c=r[k+'Cases']||0; return '<td class="num">'+(t?t+'/':'')+c+'</td>'; }
+    return '<tr>' +
+      '<td>' + r.date + '</td>' +
+      '<td class="num">' + fmt(r.qty) + '</td>' +
+      '<td class="num">' + fmt(r.shopee) + '</td>' +
+      vc('pop')+vc('m6')+vc('l6')+vc('dom')+vc('intl')+vc('self')+vc('ext')+
+      '<td class="num">' + fmt(r.totalCost) + '</td>' +
+      '<td class="num" style="font-weight:700;color:#d97706">' + fmt(r.totalCases) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  // Footer totals
+  var totQty   = rows.reduce(function(s,r){ return s+(r.qty||0); },0);
+  var totShopee= rows.reduce(function(s,r){ return s+(r.shopee||0); },0);
+  var totCost  = rows.reduce(function(s,r){ return s+(r.totalCost||0); },0);
+  var totCases = rows.reduce(function(s,r){ return s+(r.totalCases||0); },0);
+  function totVehC(k){ return rows.reduce(function(s,r){ return s+(r[k+'Cases']||0); },0); }
+  el('recent-tfoot').innerHTML =
+    '<tr style="background:#fff7ed;font-weight:700;color:#92400e">' +
+    '<td>รวม '+rows.length+' วัน</td>' +
+    '<td class="num">'+fmt(totQty)+'</td>' +
+    '<td class="num">'+fmt(totShopee)+'</td>' +
+    VEH_KEYS.map(function(k){ return '<td class="num">'+fmt(totVehC(k))+'</td>'; }).join('') +
+    '<td class="num">'+fmt(totCost)+'</td>' +
+    '<td class="num">'+fmt(totCases)+'</td>' +
+    '</tr>';
+
+  // Update title
+  if (rangeFrom || rangeTo) {
+    el('recent-title').textContent = '📋 รายการ ' + (rangeFrom||'…') + ' ถึง ' + (rangeTo||'…') + ' ('+rows.length+' วัน)';
+  } else {
+    el('recent-title').textContent = '📋 รายการทั้งหมด (' + rows.length + ' วัน)';
+  }
+}
+
+// ──────────────────────────────────────
+// Charts
+// ──────────────────────────────────────
+function buildCharts() {
+  buildLineChart();
+  buildBarChart();
+}
+
+function buildLineChart() {
+  var recs = getRangeRecords();
+  var days, labels, data;
+
+  if (recs.length === 0) {
+    // fallback: 30 days
+    days = [];
+    for (var i = 29; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate() - i);
+      days.push(d.toISOString().slice(0,10));
+    }
+  } else {
+    // use actual dates in range
+    days = recs.map(function(r){ return r.date; });
+  }
+
+  labels = days.map(function(d){ return d.slice(5); });
+  data   = days.map(function(d){
+    var r = records.find(function(x){ return x.date === d; });
+    return r ? r.qty : null;
+  });
+
+  var rangeLabel = (rangeFrom || rangeTo) ? (rangeFrom||'…')+' ถึง '+(rangeTo||'…') : '30 วันล่าสุด';
+  if (el('line-chart-title')) el('line-chart-title').textContent = '📈 ยอดส่งออกรายวัน (' + rangeLabel + ')';
+
+  var ctx = el('lineChart').getContext('2d');
+  if (lineChartInst) lineChartInst.destroy();
+  lineChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'จำนวนสินค้าส่งออก',
+        data: data,
+        borderColor: '#d97706',
+        backgroundColor: 'rgba(217,119,6,0.07)',
+        borderWidth: 2.5,
+        pointRadius: days.length <= 31 ? 4 : 2,
+        pointBackgroundColor: '#d97706',
+        tension: 0.35,
+        spanGaps: true,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } }
+      }
+    }
+  });
+}
+
+function buildBarChart() {
+  var recs = getRangeRecords();
+  if (recs.length === 0) recs = records;
+  var data = VEH_KEYS.map(function (k) {
+    return recs.reduce(function (s, r) { return s + (r[k + 'Cases'] || 0); }, 0);
+  });
+  var rangeLabel = (rangeFrom || rangeTo) ? (rangeFrom||'…')+' ถึง '+(rangeTo||'…') : 'ทั้งหมด';
+  if (el('bar-chart-title')) el('bar-chart-title').textContent = '🚚 รวมลังตามประเภทรถ (' + rangeLabel + ')';
+
+  var ctx = el('barChart').getContext('2d');
+  if (barChartInst) barChartInst.destroy();
+  barChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: VEH_LABELS,
+      datasets: [{
+        label: 'จำนวนลัง',
+        data: data,
+        backgroundColor: VEH_COLORS,
+        borderRadius: 5,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────
+// Export CSV
+// ──────────────────────────────────────
+function exportCSV() {
+  var filter = el('filter-month').value;
+  var rows = records.filter(function (r) { return !filter || r.date.startsWith(filter); });
+  if (!rows.length) { showToast('ไม่มีข้อมูลที่จะส่งออก'); return; }
+
+  var cols = ['date','qty','shopee','allowance','parking','cashDelivery','totalCost',
+    'popTrips','popCases','m6Trips','m6Cases','l6Trips','l6Cases',
+    'domTrips','domCases','intlTrips','intlCases','selfTrips','selfCases',
+    'extTrips','extCases','totalCases'];
+  var hdr = ['วันที่','จำนวนสินค้าส่งออก','shopee/lazada','ค่าเบี้ยเลี้ยง','ค่าจอดรถ+ทางด่วน+พาเลท',
+    'ค่าขนส่งเงินสด','รวมค่าใช้จ่าย',
+    'รถป็อบ(เที่ยว)','รถป็อบ(ลัง)','รถ6ล้อกลาง(เที่ยว)','รถ6ล้อกลาง(ลัง)',
+    'รถ6ล้อใหญ่(เที่ยว)','รถ6ล้อใหญ่(ลัง)',
+    'รับจ้างในประเทศ(เที่ยว)','รับจ้างในประเทศ(ลัง)',
+    'รับจ้างต่างประเทศ(เที่ยว)','รับจ้างต่างประเทศ(ลัง)',
+    'ขนส่งมารับเอง(เที่ยว)','ขนส่งมารับเอง(ลัง)',
+    'ตู้นอกมารับ(เที่ยว)','ตู้นอกมารับ(ลัง)','รวมลัง'];
+
+  var csv = ['﻿' + hdr.join(',')];
+  rows.forEach(function (r) {
+    csv.push(cols.map(function (c) { return r[c] !== undefined ? r[c] : 0; }).join(','));
+  });
+
+  var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ยอดออกต่อวัน_' + (filter || 'ทั้งหมด') + '.csv';
+  a.click();
+}
+
+// ──────────────────────────────────────
+// Tab Navigation
+// ──────────────────────────────────────
+// ──────────────────────────────────────
+// Export / Import JSON (sync between machines)
+// ──────────────────────────────────────
+function exportJSON() {
+  if (!records.length) { showToast('ไม่มีข้อมูล'); return; }
+  var blob = new Blob([JSON.stringify(records, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'export_data_' + todayStr() + '.json';
+  a.click();
+  showToast('✅ Export JSON เรียบร้อย (' + records.length + ' รายการ)');
+}
+
+function importJSON() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var imported = JSON.parse(ev.target.result);
+        if (!Array.isArray(imported)) { showToast('❌ ไฟล์ไม่ถูกต้อง'); return; }
+        var before = records.length;
+        mergeSheetData(imported);
+        showToast('✅ Import สำเร็จ (' + (records.length - before) + ' รายการใหม่)');
+      } catch(err) {
+        showToast('❌ อ่านไฟล์ไม่ได้: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+  el('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'overview') { buildOverview(); }
+  if (id === 'history') buildHistory();
+}
+
+// ──────────────────────────────────────
+// Refresh All Views
+// ──────────────────────────────────────
+function refreshAll() {
+  buildOverview();
+  buildHistory();
+}
+
+// ──────────────────────────────────────
+// PRELOAD DATA (จากไฟล์ Excel รายการยอดออกต่อวัน.xlsx)
+// ──────────────────────────────────────
+var PRELOAD_DATA = [{"id":"20251229_85day","date":"2025-12-29","qty":16413,"allowance":1970,"parking":355,"cashDelivery":0,"totalCost":2325,"shopee":369,"popTrips":3,"popCases":69,"m6Trips":1,"m6Cases":349,"l6Trips":0,"l6Cases":373,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":9,"selfCases":15253,"extTrips":0,"extCases":0,"totalCases":16413,"savedAt":"2026-06-12T09:41:17.041454"},{"id":"20251230_nfwpo","date":"2025-12-30","qty":14976,"allowance":1000,"parking":0,"cashDelivery":0,"totalCost":1000,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":4,"selfCases":14976,"extTrips":0,"extCases":0,"totalCases":14976,"savedAt":"2026-06-12T09:41:17.041499"},{"id":"20251231_5hv7k","date":"2025-12-31","qty":18336,"allowance":1000,"parking":0,"cashDelivery":0,"totalCost":1000,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":7,"selfCases":18336,"extTrips":0,"extCases":0,"totalCases":18336,"savedAt":"2026-06-12T09:41:17.041524"},{"id":"20260101_grlzw","date":"2026-01-01","qty":8442,"allowance":1000,"parking":0,"cashDelivery":0,"totalCost":1000,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":5,"selfCases":8442,"extTrips":0,"extCases":0,"totalCases":8442,"savedAt":"2026-06-12T09:41:17.041546"},{"id":"20260102_cj8gs","date":"2026-01-02","qty":23561,"allowance":1000,"parking":0,"cashDelivery":0,"totalCost":1000,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":8,"selfCases":23561,"extTrips":0,"extCases":0,"totalCases":23561,"savedAt":"2026-06-12T09:41:17.041565"},{"id":"20260103_gybom","date":"2026-01-03","qty":14735,"allowance":1200,"parking":250,"cashDelivery":0,"totalCost":1450,"shopee":0,"popTrips":3,"popCases":142,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":7,"selfCases":14593,"extTrips":0,"extCases":0,"totalCases":14735,"savedAt":"2026-06-12T09:41:17.041585"},{"id":"20260105_6xrja","date":"2026-01-05","qty":26819,"allowance":3310,"parking":0,"cashDelivery":60,"totalCost":3370,"shopee":690,"popTrips":1,"popCases":74,"m6Trips":1,"m6Cases":250,"l6Trips":2,"l6Cases":945,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":10,"selfCases":24860,"extTrips":0,"extCases":0,"totalCases":26819,"savedAt":"2026-06-12T09:41:17.041618"},{"id":"20260106_8wow9","date":"2026-01-06","qty":26442,"allowance":4330,"parking":330,"cashDelivery":250,"totalCost":4910,"shopee":719,"popTrips":7,"popCases":502,"m6Trips":2,"m6Cases":440,"l6Trips":2,"l6Cases":1219,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":35,"selfCases":21280,"extTrips":1,"extCases":2282,"totalCases":26442,"savedAt":"2026-06-12T09:41:17.041649"},{"id":"20260107_0mq4d","date":"2026-01-07","qty":19769,"allowance":4710,"parking":545,"cashDelivery":0,"totalCost":5255,"shopee":137,"popTrips":9,"popCases":664,"m6Trips":2,"m6Cases":419,"l6Trips":1,"l6Cases":358,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":18191,"extTrips":0,"extCases":0,"totalCases":19769,"savedAt":"2026-06-12T09:41:17.041670"},{"id":"20260108_59j51","date":"2026-01-08","qty":18264,"allowance":4530,"parking":740,"cashDelivery":0,"totalCost":5270,"shopee":166,"popTrips":10,"popCases":805,"m6Trips":1,"m6Cases":320,"l6Trips":0,"l6Cases":0,"domTrips":1,"domCases":250,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":15812,"extTrips":1,"extCases":911,"totalCases":18264,"savedAt":"2026-06-12T09:41:17.041691"},{"id":"20260109_23qyx","date":"2026-01-09","qty":20938,"allowance":5080,"parking":475,"cashDelivery":165,"totalCost":5720,"shopee":85,"popTrips":9,"popCases":851,"m6Trips":0,"m6Cases":0,"l6Trips":1,"l6Cases":562,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":16808,"extTrips":1,"extCases":2632,"totalCases":20938,"savedAt":"2026-06-12T09:41:17.041710"},{"id":"20260110_yduzw","date":"2026-01-10","qty":16315,"allowance":4040,"parking":255,"cashDelivery":0,"totalCost":4295,"shopee":25,"popTrips":5,"popCases":261,"m6Trips":1,"m6Cases":190,"l6Trips":3,"l6Cases":2161,"domTrips":1,"domCases":407,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":13271,"extTrips":0,"extCases":0,"totalCases":16315,"savedAt":"2026-06-12T09:41:17.041730"},{"id":"20260112_fjijg","date":"2026-01-12","qty":17992,"allowance":6480,"parking":460,"cashDelivery":86469,"totalCost":93409,"shopee":218,"popTrips":6,"popCases":555,"m6Trips":2,"m6Cases":468,"l6Trips":3,"l6Cases":1864,"domTrips":1,"domCases":256,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":12604,"extTrips":1,"extCases":2027,"totalCases":17992,"savedAt":"2026-06-12T09:41:17.041763"},{"id":"20260113_pdt8t","date":"2026-01-13","qty":67189,"allowance":6030,"parking":575,"cashDelivery":2415,"totalCost":9020,"shopee":97,"popTrips":7,"popCases":587,"m6Trips":2,"m6Cases":492,"l6Trips":2,"l6Cases":951,"domTrips":0,"domCases":0,"intlTrips":2,"intlCases":1040,"selfTrips":23,"selfCases":64022,"extTrips":0,"extCases":0,"totalCases":67189,"savedAt":"2026-06-12T09:41:17.041781"},{"id":"20260114_60gdp","date":"2026-01-14","qty":21749,"allowance":4200,"parking":540,"cashDelivery":2900,"totalCost":7640,"shopee":86,"popTrips":7,"popCases":787,"m6Trips":2,"m6Cases":365,"l6Trips":1,"l6Cases":519,"domTrips":2,"domCases":903,"intlTrips":0,"intlCases":0,"selfTrips":22,"selfCases":19089,"extTrips":0,"extCases":0,"totalCases":21749,"savedAt":"2026-06-12T09:41:17.041799"},{"id":"20260115_h3024","date":"2026-01-15","qty":19196,"allowance":5130,"parking":770,"cashDelivery":3705,"totalCost":9605,"shopee":182,"popTrips":8,"popCases":784,"m6Trips":3,"m6Cases":631,"l6Trips":1,"l6Cases":360,"domTrips":2,"domCases":730,"intlTrips":0,"intlCases":0,"selfTrips":12,"selfCases":12514,"extTrips":1,"extCases":3995,"totalCases":19196,"savedAt":"2026-06-12T09:41:17.041817"},{"id":"20260116_7zn9s","date":"2026-01-16","qty":18189,"allowance":4650,"parking":335,"cashDelivery":8995,"totalCost":13980,"shopee":115,"popTrips":7,"popCases":646,"m6Trips":0,"m6Cases":0,"l6Trips":3,"l6Cases":1140,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":22,"selfCases":16288,"extTrips":0,"extCases":0,"totalCases":18189,"savedAt":"2026-06-12T09:41:17.041835"},{"id":"20260117_tykm6","date":"2026-01-17","qty":13862,"allowance":4890,"parking":570,"cashDelivery":3200,"totalCost":8660,"shopee":23,"popTrips":7,"popCases":525,"m6Trips":0,"m6Cases":0,"l6Trips":3,"l6Cases":1216,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":12098,"extTrips":0,"extCases":0,"totalCases":13862,"savedAt":"2026-06-12T09:41:17.041853"},{"id":"20260119_b9373","date":"2026-01-19","qty":23443,"allowance":4760,"parking":935,"cashDelivery":0,"totalCost":5695,"shopee":280,"popTrips":8,"popCases":450,"m6Trips":1,"m6Cases":266,"l6Trips":1,"l6Cases":421,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":20785,"extTrips":1,"extCases":1241,"totalCases":23443,"savedAt":"2026-06-12T09:41:17.041884"},{"id":"20260120_ywx1q","date":"2026-01-20","qty":22644,"allowance":4550,"parking":345,"cashDelivery":0,"totalCost":4895,"shopee":102,"popTrips":8,"popCases":793,"m6Trips":1,"m6Cases":246,"l6Trips":1,"l6Cases":571,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":26,"selfCases":20932,"extTrips":0,"extCases":0,"totalCases":22644,"savedAt":"2026-06-12T09:41:17.041903"},{"id":"20260121_o19sn","date":"2026-01-21","qty":26772,"allowance":6140,"parking":560,"cashDelivery":480,"totalCost":7180,"shopee":124,"popTrips":6,"popCases":557,"m6Trips":1,"m6Cases":326,"l6Trips":3,"l6Cases":1137,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":24628,"extTrips":0,"extCases":0,"totalCases":26772,"savedAt":"2026-06-12T09:41:17.041925"},{"id":"20260122_r9ys7","date":"2026-01-22","qty":23869,"allowance":4700,"parking":150,"cashDelivery":1665,"totalCost":6515,"shopee":154,"popTrips":9,"popCases":668,"m6Trips":2,"m6Cases":396,"l6Trips":1,"l6Cases":416,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":22235,"extTrips":0,"extCases":0,"totalCases":23869,"savedAt":"2026-06-12T09:41:17.041944"},{"id":"20260123_4mtof","date":"2026-01-23","qty":46573,"allowance":4700,"parking":510,"cashDelivery":0,"totalCost":5210,"shopee":93,"popTrips":5,"popCases":497,"m6Trips":1,"m6Cases":166,"l6Trips":2,"l6Cases":880,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":27,"selfCases":44937,"extTrips":0,"extCases":0,"totalCases":46573,"savedAt":"2026-06-12T09:41:17.041962"},{"id":"20260124_imlzx","date":"2026-01-24","qty":15629,"allowance":4800,"parking":770,"cashDelivery":1085,"totalCost":6655,"shopee":21,"popTrips":7,"popCases":536,"m6Trips":2,"m6Cases":464,"l6Trips":1,"l6Cases":357,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":14251,"extTrips":0,"extCases":0,"totalCases":15629,"savedAt":"2026-06-12T09:41:17.041980"},{"id":"20260126_79rfp","date":"2026-01-26","qty":21732,"allowance":3920,"parking":290,"cashDelivery":8235,"totalCost":12445,"shopee":262,"popTrips":8,"popCases":607,"m6Trips":2,"m6Cases":597,"l6Trips":2,"l6Cases":1521,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":18745,"extTrips":0,"extCases":0,"totalCases":21732,"savedAt":"2026-06-12T09:41:17.042010"},{"id":"20260127_xj6xr","date":"2026-01-27","qty":28826,"allowance":7550,"parking":990,"cashDelivery":510,"totalCost":9050,"shopee":122,"popTrips":8,"popCases":569,"m6Trips":1,"m6Cases":232,"l6Trips":2,"l6Cases":905,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":22,"selfCases":26998,"extTrips":0,"extCases":0,"totalCases":28826,"savedAt":"2026-06-12T09:41:17.042029"},{"id":"20260128_p1apr","date":"2026-01-28","qty":38316,"allowance":6180,"parking":475,"cashDelivery":0,"totalCost":6655,"shopee":252,"popTrips":7,"popCases":609,"m6Trips":1,"m6Cases":218,"l6Trips":1,"l6Cases":486,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":25,"selfCases":35364,"extTrips":1,"extCases":1387,"totalCases":38316,"savedAt":"2026-06-12T09:41:17.042047"},{"id":"20260129_7ub32","date":"2026-01-29","qty":15700,"allowance":4760,"parking":475,"cashDelivery":3005,"totalCost":8240,"shopee":512,"popTrips":6,"popCases":598,"m6Trips":2,"m6Cases":487,"l6Trips":1,"l6Cases":545,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":13558,"extTrips":0,"extCases":0,"totalCases":15700,"savedAt":"2026-06-12T09:41:17.042065"},{"id":"20260130_3618y","date":"2026-01-30","qty":23056,"allowance":300,"parking":5280,"cashDelivery":1250,"totalCost":6830,"shopee":313,"popTrips":7,"popCases":502,"m6Trips":1,"m6Cases":216,"l6Trips":2,"l6Cases":748,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":18076,"extTrips":3,"extCases":3201,"totalCases":23056,"savedAt":"2026-06-12T09:41:17.042083"},{"id":"20260131_l4afe","date":"2026-01-31","qty":10894,"allowance":2540,"parking":795,"cashDelivery":0,"totalCost":3335,"shopee":40,"popTrips":5,"popCases":391,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":1004,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":9459,"extTrips":0,"extCases":0,"totalCases":10894,"savedAt":"2026-06-12T09:41:17.042101"},{"id":"20260202_kx6jq","date":"2026-02-02","qty":24233,"allowance":4520,"parking":310,"cashDelivery":0,"totalCost":4830,"shopee":383,"popTrips":3,"popCases":150,"m6Trips":1,"m6Cases":232,"l6Trips":3,"l6Cases":1506,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":21962,"extTrips":0,"extCases":0,"totalCases":24233,"savedAt":"2026-06-12T09:41:17.042143"},{"id":"20260203_yxw71","date":"2026-02-03","qty":18129,"allowance":3940,"parking":330,"cashDelivery":0,"totalCost":4270,"shopee":274,"popTrips":7,"popCases":853,"m6Trips":2,"m6Cases":555,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":16447,"extTrips":0,"extCases":0,"totalCases":18129,"savedAt":"2026-06-12T09:41:17.042161"},{"id":"20260204_tstqf","date":"2026-02-04","qty":27614,"allowance":5990,"parking":610,"cashDelivery":1170,"totalCost":7770,"shopee":244,"popTrips":10,"popCases":1070,"m6Trips":0,"m6Cases":0,"l6Trips":1,"l6Cases":466,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":19,"selfCases":23488,"extTrips":1,"extCases":2346,"totalCases":27614,"savedAt":"2026-06-12T09:41:17.042178"},{"id":"20260205_2q536","date":"2026-02-05","qty":19316,"allowance":3990,"parking":495,"cashDelivery":0,"totalCost":4485,"shopee":258,"popTrips":7,"popCases":593,"m6Trips":3,"m6Cases":777,"l6Trips":1,"l6Cases":410,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":16,"selfCases":17278,"extTrips":0,"extCases":0,"totalCases":19316,"savedAt":"2026-06-12T09:41:17.042194"},{"id":"20260206_oq0pl","date":"2026-02-06","qty":22270,"allowance":5360,"parking":630,"cashDelivery":0,"totalCost":5990,"shopee":175,"popTrips":8,"popCases":739,"m6Trips":2,"m6Cases":471,"l6Trips":1,"l6Cases":515,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":19,"selfCases":15562,"extTrips":2,"extCases":4808,"totalCases":22270,"savedAt":"2026-06-12T09:41:17.042209"},{"id":"20260207_bjwe0","date":"2026-02-07","qty":13357,"allowance":4680,"parking":425,"cashDelivery":510,"totalCost":5615,"shopee":32,"popTrips":6,"popCases":599,"m6Trips":2,"m6Cases":295,"l6Trips":1,"l6Cases":513,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":11918,"extTrips":0,"extCases":0,"totalCases":13357,"savedAt":"2026-06-12T09:41:17.042224"},{"id":"20260209_6that","date":"2026-02-09","qty":19784,"allowance":3120,"parking":535,"cashDelivery":0,"totalCost":3655,"shopee":465,"popTrips":7,"popCases":613,"m6Trips":2,"m6Cases":417,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":19,"selfCases":18289,"extTrips":0,"extCases":0,"totalCases":19784,"savedAt":"2026-06-12T09:41:17.042250"},{"id":"20260210_x88ea","date":"2026-02-10","qty":21841,"allowance":4520,"parking":805,"cashDelivery":120164,"totalCost":125489,"shopee":237,"popTrips":8,"popCases":659,"m6Trips":1,"m6Cases":368,"l6Trips":1,"l6Cases":280,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":20297,"extTrips":0,"extCases":0,"totalCases":21841,"savedAt":"2026-06-12T09:41:17.042266"},{"id":"20260211_bl0rz","date":"2026-02-11","qty":26241,"allowance":4660,"parking":290,"cashDelivery":0,"totalCost":4950,"shopee":115,"popTrips":5,"popCases":503,"m6Trips":1,"m6Cases":266,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":25357,"extTrips":0,"extCases":0,"totalCases":26241,"savedAt":"2026-06-12T09:41:17.042282"},{"id":"20260212_merx4","date":"2026-02-12","qty":22858,"allowance":6110,"parking":395,"cashDelivery":0,"totalCost":6505,"shopee":178,"popTrips":8,"popCases":549,"m6Trips":2,"m6Cases":454,"l6Trips":1,"l6Cases":512,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":22,"selfCases":16051,"extTrips":3,"extCases":5114,"totalCases":22858,"savedAt":"2026-06-12T09:41:17.042299"},{"id":"20260213_mh1mt","date":"2026-02-13","qty":29993,"allowance":6380,"parking":240,"cashDelivery":0,"totalCost":6620,"shopee":147,"popTrips":8,"popCases":594,"m6Trips":3,"m6Cases":694,"l6Trips":4,"l6Cases":2716,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":26,"selfCases":20739,"extTrips":2,"extCases":5103,"totalCases":29993,"savedAt":"2026-06-12T09:41:17.042317"},{"id":"20260214_kxur2","date":"2026-02-14","qty":15647,"allowance":5270,"parking":430,"cashDelivery":0,"totalCost":5700,"shopee":38,"popTrips":5,"popCases":312,"m6Trips":2,"m6Cases":450,"l6Trips":2,"l6Cases":893,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":13954,"extTrips":0,"extCases":0,"totalCases":15647,"savedAt":"2026-06-12T09:41:17.042334"},{"id":"20260216_j6kur","date":"2026-02-16","qty":22455,"allowance":3910,"parking":330,"cashDelivery":0,"totalCost":4240,"shopee":328,"popTrips":6,"popCases":643,"m6Trips":1,"m6Cases":237,"l6Trips":1,"l6Cases":451,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":20796,"extTrips":0,"extCases":0,"totalCases":22455,"savedAt":"2026-06-12T09:41:17.042360"},{"id":"20260217_uurkq","date":"2026-02-17","qty":20232,"allowance":3640,"parking":475,"cashDelivery":0,"totalCost":4115,"shopee":184,"popTrips":10,"popCases":789,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":25,"selfCases":17949,"extTrips":1,"extCases":1310,"totalCases":20232,"savedAt":"2026-06-12T09:41:17.042377"},{"id":"20260218_l55wq","date":"2026-02-18","qty":40436,"allowance":5770,"parking":850,"cashDelivery":5595,"totalCost":12215,"shopee":224,"popTrips":6,"popCases":429,"m6Trips":2,"m6Cases":478,"l6Trips":1,"l6Cases":494,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":24,"selfCases":33455,"extTrips":2,"extCases":5356,"totalCases":40436,"savedAt":"2026-06-12T09:41:17.042393"},{"id":"20260219_cteb3","date":"2026-02-19","qty":21375,"allowance":4990,"parking":555,"cashDelivery":0,"totalCost":5545,"shopee":264,"popTrips":10,"popCases":892,"m6Trips":2,"m6Cases":280,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":17656,"extTrips":1,"extCases":2283,"totalCases":21375,"savedAt":"2026-06-12T09:41:17.042410"},{"id":"20260220_lya5g","date":"2026-02-20","qty":29100,"allowance":5700,"parking":545,"cashDelivery":0,"totalCost":6245,"shopee":200,"popTrips":9,"popCases":668,"m6Trips":1,"m6Cases":282,"l6Trips":1,"l6Cases":433,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":24,"selfCases":17810,"extTrips":2,"extCases":9707,"totalCases":29100,"savedAt":"2026-06-12T09:41:17.042427"},{"id":"20260221_pupw4","date":"2026-02-21","qty":13870,"allowance":3890,"parking":280,"cashDelivery":1385,"totalCost":5555,"shopee":39,"popTrips":6,"popCases":412,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":794,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":18,"selfCases":12625,"extTrips":0,"extCases":0,"totalCases":13870,"savedAt":"2026-06-12T09:41:17.042444"},{"id":"20260223_4ftyj","date":"2026-02-23","qty":21519,"allowance":3070,"parking":405,"cashDelivery":90226,"totalCost":93701,"shopee":482,"popTrips":6,"popCases":438,"m6Trips":2,"m6Cases":358,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":19050,"extTrips":1,"extCases":1191,"totalCases":21519,"savedAt":"2026-06-12T09:41:17.042470"},{"id":"20260224_sey3g","date":"2026-02-24","qty":17058,"allowance":570,"parking":445,"cashDelivery":150,"totalCost":1165,"shopee":157,"popTrips":10,"popCases":697,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":667,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":14461,"extTrips":1,"extCases":1076,"totalCases":17058,"savedAt":"2026-06-12T09:41:17.042486"},{"id":"20260225_cutx5","date":"2026-02-25","qty":31100,"allowance":5090,"parking":945,"cashDelivery":0,"totalCost":6035,"shopee":282,"popTrips":7,"popCases":615,"m6Trips":2,"m6Cases":470,"l6Trips":2,"l6Cases":798,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":26,"selfCases":28935,"extTrips":0,"extCases":0,"totalCases":31100,"savedAt":"2026-06-12T09:41:17.042502"},{"id":"20260226_8dwb1","date":"2026-02-26","qty":19478,"allowance":6290,"parking":644,"cashDelivery":1945,"totalCost":8879,"shopee":292,"popTrips":8,"popCases":995,"m6Trips":3,"m6Cases":615,"l6Trips":1,"l6Cases":353,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":14208,"extTrips":2,"extCases":3015,"totalCases":19478,"savedAt":"2026-06-12T09:41:17.042518"},{"id":"20260227_vymly","date":"2026-02-27","qty":22233,"allowance":4600,"parking":610,"cashDelivery":1805,"totalCost":7015,"shopee":156,"popTrips":8,"popCases":590,"m6Trips":2,"m6Cases":402,"l6Trips":1,"l6Cases":400,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":18175,"extTrips":2,"extCases":2510,"totalCases":22233,"savedAt":"2026-06-12T09:41:17.042535"},{"id":"20260228_lh3n7","date":"2026-02-28","qty":16234,"allowance":5240,"parking":630,"cashDelivery":9885,"totalCost":15755,"shopee":35,"popTrips":6,"popCases":378,"m6Trips":2,"m6Cases":465,"l6Trips":2,"l6Cases":937,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":14419,"extTrips":0,"extCases":0,"totalCases":16234,"savedAt":"2026-06-12T09:41:17.042570"},{"id":"20260302_d8kg2","date":"2026-03-02","qty":23603,"allowance":4340,"parking":260,"cashDelivery":0,"totalCost":4600,"shopee":417,"popTrips":8,"popCases":871,"m6Trips":1,"m6Cases":255,"l6Trips":2,"l6Cases":915,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":18,"selfCases":19524,"extTrips":1,"extCases":1621,"totalCases":23603,"savedAt":"2026-06-12T09:41:17.042613"},{"id":"20260304_mecaa","date":"2026-03-04","qty":38088,"allowance":6630,"parking":420,"cashDelivery":0,"totalCost":7050,"shopee":515,"popTrips":8,"popCases":529,"m6Trips":2,"m6Cases":432,"l6Trips":1,"l6Cases":579,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":39,"selfCases":35203,"extTrips":1,"extCases":830,"totalCases":38088,"savedAt":"2026-06-12T09:41:17.042647"},{"id":"20260305_z4ldw","date":"2026-03-05","qty":21669,"allowance":6410,"parking":635,"cashDelivery":2010,"totalCost":9055,"shopee":260,"popTrips":10,"popCases":937,"m6Trips":2,"m6Cases":266,"l6Trips":3,"l6Cases":1652,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":16546,"extTrips":1,"extCases":2008,"totalCases":21669,"savedAt":"2026-06-12T09:41:17.042664"},{"id":"20260306_tmccd","date":"2026-03-06","qty":24431,"allowance":4300,"parking":190,"cashDelivery":915,"totalCost":5405,"shopee":248,"popTrips":6,"popCases":548,"m6Trips":1,"m6Cases":211,"l6Trips":1,"l6Cases":418,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":31,"selfCases":21497,"extTrips":1,"extCases":1509,"totalCases":24431,"savedAt":"2026-06-12T09:41:17.042682"},{"id":"20260307_h2mlx","date":"2026-03-07","qty":13975,"allowance":4380,"parking":755,"cashDelivery":0,"totalCost":5135,"shopee":0,"popTrips":10,"popCases":612,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":13363,"extTrips":0,"extCases":0,"totalCases":13975,"savedAt":"2026-06-12T09:41:17.042698"},{"id":"20260309_t7wld","date":"2026-03-09","qty":21360,"allowance":4800,"parking":515,"cashDelivery":0,"totalCost":5315,"shopee":482,"popTrips":10,"popCases":742,"m6Trips":1,"m6Cases":174,"l6Trips":1,"l6Cases":215,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":17440,"extTrips":1,"extCases":2307,"totalCases":21360,"savedAt":"2026-06-12T09:41:17.042725"},{"id":"20260310_imy2z","date":"2026-03-10","qty":26946,"allowance":6350,"parking":280,"cashDelivery":3705,"totalCost":10335,"shopee":247,"popTrips":7,"popCases":716,"m6Trips":2,"m6Cases":454,"l6Trips":2,"l6Cases":814,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":31,"selfCases":21894,"extTrips":1,"extCases":2821,"totalCases":26946,"savedAt":"2026-06-12T09:41:17.042741"},{"id":"20260311_bvosx","date":"2026-03-11","qty":31708,"allowance":4960,"parking":335,"cashDelivery":0,"totalCost":5295,"shopee":298,"popTrips":6,"popCases":446,"m6Trips":1,"m6Cases":202,"l6Trips":2,"l6Cases":854,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":27,"selfCases":29056,"extTrips":1,"extCases":852,"totalCases":31708,"savedAt":"2026-06-12T09:41:17.042757"},{"id":"20260312_068iy","date":"2026-03-12","qty":16261,"allowance":6410,"parking":605,"cashDelivery":26250,"totalCost":33265,"shopee":416,"popTrips":10,"popCases":1020,"m6Trips":1,"m6Cases":178,"l6Trips":1,"l6Cases":510,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":11,"selfCases":14137,"extTrips":0,"extCases":0,"totalCases":16261,"savedAt":"2026-06-12T09:41:17.042773"},{"id":"20260313_9o5r1","date":"2026-03-13","qty":24298,"allowance":5550,"parking":510,"cashDelivery":1155,"totalCost":7215,"shopee":455,"popTrips":12,"popCases":734,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":890,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":46,"selfCases":22219,"extTrips":0,"extCases":0,"totalCases":24298,"savedAt":"2026-06-12T09:41:17.042790"},{"id":"20260314_0xujs","date":"2026-03-14","qty":9829,"allowance":4330,"parking":500,"cashDelivery":0,"totalCost":4830,"shopee":61,"popTrips":8,"popCases":574,"m6Trips":2,"m6Cases":512,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":10,"selfCases":8682,"extTrips":0,"extCases":0,"totalCases":9829,"savedAt":"2026-06-12T09:41:17.042806"},{"id":"20260316_eog9c","date":"2026-03-16","qty":25906,"allowance":5580,"parking":390,"cashDelivery":0,"totalCost":5970,"shopee":672,"popTrips":6,"popCases":597,"m6Trips":1,"m6Cases":306,"l6Trips":2,"l6Cases":1250,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":16,"selfCases":18604,"extTrips":3,"extCases":4477,"totalCases":25906,"savedAt":"2026-06-12T09:41:17.042834"},{"id":"20260317_dnoxj","date":"2026-03-17","qty":25353,"allowance":6050,"parking":365,"cashDelivery":0,"totalCost":6415,"shopee":290,"popTrips":8,"popCases":700,"m6Trips":1,"m6Cases":316,"l6Trips":4,"l6Cases":2362,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":30,"selfCases":19515,"extTrips":1,"extCases":2170,"totalCases":25353,"savedAt":"2026-06-12T09:41:17.042851"},{"id":"20260318_b70u3","date":"2026-03-18","qty":31292,"allowance":6500,"parking":855,"cashDelivery":1770,"totalCost":9125,"shopee":268,"popTrips":4,"popCases":302,"m6Trips":2,"m6Cases":355,"l6Trips":2,"l6Cases":847,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":24,"selfCases":29520,"extTrips":0,"extCases":0,"totalCases":31292,"savedAt":"2026-06-12T09:41:17.042867"},{"id":"20260319_vhexi","date":"2026-03-19","qty":16389,"allowance":3880,"parking":1065,"cashDelivery":0,"totalCost":4945,"shopee":265,"popTrips":5,"popCases":401,"m6Trips":3,"m6Cases":660,"l6Trips":1,"l6Cases":326,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":14737,"extTrips":0,"extCases":0,"totalCases":16389,"savedAt":"2026-06-12T09:41:17.042885"},{"id":"20260320_ja89b","date":"2026-03-20","qty":31891,"allowance":5450,"parking":486,"cashDelivery":9245,"totalCost":15181,"shopee":185,"popTrips":9,"popCases":594,"m6Trips":2,"m6Cases":366,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":29,"selfCases":26091,"extTrips":3,"extCases":4655,"totalCases":31891,"savedAt":"2026-06-12T09:41:17.042902"},{"id":"20260321_687gj","date":"2026-03-21","qty":14724,"allowance":5410,"parking":625,"cashDelivery":0,"totalCost":6035,"shopee":49,"popTrips":4,"popCases":440,"m6Trips":1,"m6Cases":232,"l6Trips":3,"l6Cases":1465,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":12538,"extTrips":0,"extCases":0,"totalCases":14724,"savedAt":"2026-06-12T09:41:17.042918"},{"id":"20260323_j3i7t","date":"2026-03-23","qty":21383,"allowance":5730,"parking":685,"cashDelivery":0,"totalCost":6415,"shopee":380,"popTrips":9,"popCases":758,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":1090,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":19155,"extTrips":0,"extCases":0,"totalCases":21383,"savedAt":"2026-06-12T09:41:17.042945"},{"id":"20260324_ugwij","date":"2026-03-24","qty":42666,"allowance":5340,"parking":215,"cashDelivery":3510,"totalCost":9065,"shopee":305,"popTrips":6,"popCases":528,"m6Trips":3,"m6Cases":673,"l6Trips":2,"l6Cases":961,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":48,"selfCases":40199,"extTrips":0,"extCases":0,"totalCases":42666,"savedAt":"2026-06-12T09:41:17.042961"},{"id":"20260325_3vhhz","date":"2026-03-25","qty":26162,"allowance":4880,"parking":450,"cashDelivery":1730,"totalCost":7060,"shopee":233,"popTrips":9,"popCases":757,"m6Trips":2,"m6Cases":301,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":24871,"extTrips":0,"extCases":0,"totalCases":26162,"savedAt":"2026-06-12T09:41:17.042977"},{"id":"20260326_zzix3","date":"2026-03-26","qty":18870,"allowance":5840,"parking":422,"cashDelivery":75685,"totalCost":81947,"shopee":316,"popTrips":5,"popCases":360,"m6Trips":3,"m6Cases":731,"l6Trips":2,"l6Cases":1100,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":16363,"extTrips":0,"extCases":0,"totalCases":18870,"savedAt":"2026-06-12T09:41:17.042994"},{"id":"20260327_8uwmc","date":"2026-03-27","qty":24797,"allowance":5360,"parking":485,"cashDelivery":0,"totalCost":5845,"shopee":281,"popTrips":6,"popCases":562,"m6Trips":1,"m6Cases":181,"l6Trips":4,"l6Cases":1623,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":26,"selfCases":22150,"extTrips":0,"extCases":0,"totalCases":24797,"savedAt":"2026-06-12T09:41:17.043011"},{"id":"20260328_pmfb2","date":"2026-03-28","qty":13260,"allowance":3590,"parking":435,"cashDelivery":0,"totalCost":4025,"shopee":32,"popTrips":4,"popCases":362,"m6Trips":2,"m6Cases":363,"l6Trips":2,"l6Cases":1523,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":10980,"extTrips":0,"extCases":0,"totalCases":13260,"savedAt":"2026-06-12T09:41:17.043027"},{"id":"20260330_1npt3","date":"2026-03-30","qty":17573,"allowance":5060,"parking":790,"cashDelivery":0,"totalCost":5850,"shopee":656,"popTrips":9,"popCases":794,"m6Trips":0,"m6Cases":0,"l6Trips":3,"l6Cases":1689,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":14434,"extTrips":0,"extCases":0,"totalCases":17573,"savedAt":"2026-06-12T09:41:17.043054"},{"id":"20260331_qzcc2","date":"2026-03-31","qty":23191,"allowance":6210,"parking":625,"cashDelivery":1845,"totalCost":8680,"shopee":212,"popTrips":10,"popCases":1165,"m6Trips":1,"m6Cases":246,"l6Trips":2,"l6Cases":904,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":30,"selfCases":19632,"extTrips":1,"extCases":1032,"totalCases":23191,"savedAt":"2026-06-12T09:41:17.043071"},{"id":"20260401_s8yyu","date":"2026-04-01","qty":37507,"allowance":5320,"parking":530,"cashDelivery":0,"totalCost":5850,"shopee":469,"popTrips":9,"popCases":762,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":932,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":35,"selfCases":33334,"extTrips":1,"extCases":2010,"totalCases":37507,"savedAt":"2026-06-12T09:41:17.043099"},{"id":"20260402_qn0pa","date":"2026-04-02","qty":18703,"allowance":4570,"parking":660,"cashDelivery":3829,"totalCost":9059,"shopee":232,"popTrips":8,"popCases":582,"m6Trips":1,"m6Cases":242,"l6Trips":1,"l6Cases":560,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":15983,"extTrips":1,"extCases":1104,"totalCases":18703,"savedAt":"2026-06-12T09:41:17.043118"},{"id":"20260403_45jqj","date":"2026-04-03","qty":31064,"allowance":4490,"parking":895,"cashDelivery":7217,"totalCost":12602,"shopee":739,"popTrips":11,"popCases":1106,"m6Trips":0,"m6Cases":0,"l6Trips":1,"l6Cases":457,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":45,"selfCases":27429,"extTrips":1,"extCases":1333,"totalCases":31064,"savedAt":"2026-06-12T09:41:17.043135"},{"id":"20260404_ruow1","date":"2026-04-04","qty":16112,"allowance":4830,"parking":355,"cashDelivery":5373,"totalCost":10558,"shopee":58,"popTrips":8,"popCases":504,"m6Trips":1,"m6Cases":239,"l6Trips":2,"l6Cases":716,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":14595,"extTrips":0,"extCases":0,"totalCases":16112,"savedAt":"2026-06-12T09:41:17.043152"},{"id":"20260406_b1sot","date":"2026-04-06","qty":20690,"allowance":4480,"parking":55,"cashDelivery":0,"totalCost":4535,"shopee":935,"popTrips":7,"popCases":530,"m6Trips":1,"m6Cases":250,"l6Trips":1,"l6Cases":383,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":18592,"extTrips":0,"extCases":0,"totalCases":20690,"savedAt":"2026-06-12T09:41:17.043182"},{"id":"20260407_z94dx","date":"2026-04-07","qty":26375,"allowance":6000,"parking":853,"cashDelivery":0,"totalCost":6853,"shopee":466,"popTrips":7,"popCases":623,"m6Trips":3,"m6Cases":795,"l6Trips":1,"l6Cases":352,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":18933,"extTrips":2,"extCases":5206,"totalCases":26375,"savedAt":"2026-06-12T09:41:17.043200"},{"id":"20260408_2lnrz","date":"2026-04-08","qty":36036,"allowance":4260,"parking":610,"cashDelivery":4176,"totalCost":9046,"shopee":583,"popTrips":7,"popCases":679,"m6Trips":0,"m6Cases":0,"l6Trips":3,"l6Cases":1259,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":25,"selfCases":28822,"extTrips":2,"extCases":4693,"totalCases":36036,"savedAt":"2026-06-12T09:41:17.043218"},{"id":"20260409_jp2jx","date":"2026-04-09","qty":23009,"allowance":3840,"parking":305,"cashDelivery":105,"totalCost":4250,"shopee":1111,"popTrips":6,"popCases":466,"m6Trips":1,"m6Cases":147,"l6Trips":1,"l6Cases":411,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":18,"selfCases":17349,"extTrips":2,"extCases":3525,"totalCases":23009,"savedAt":"2026-06-12T09:41:17.043237"},{"id":"20260410_s1dol","date":"2026-04-10","qty":31989,"allowance":4340,"parking":65,"cashDelivery":0,"totalCost":4405,"shopee":667,"popTrips":7,"popCases":511,"m6Trips":1,"m6Cases":256,"l6Trips":1,"l6Cases":548,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":32,"selfCases":21565,"extTrips":2,"extCases":8442,"totalCases":31989,"savedAt":"2026-06-12T09:41:17.043255"},{"id":"20260411_ars8h","date":"2026-04-11","qty":7845,"allowance":1910,"parking":200,"cashDelivery":0,"totalCost":2110,"shopee":47,"popTrips":6,"popCases":405,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":6,"selfCases":7393,"extTrips":0,"extCases":0,"totalCases":7845,"savedAt":"2026-06-12T09:41:17.043273"},{"id":"20260413_8wfq4","date":"2026-04-13","qty":12664,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":12664,"extTrips":0,"extCases":0,"totalCases":12664,"savedAt":"2026-06-12T09:41:17.043303"},{"id":"20260414_prl5a","date":"2026-04-14","qty":10111,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":5,"selfCases":10111,"extTrips":0,"extCases":0,"totalCases":10111,"savedAt":"2026-06-12T09:41:17.043321"},{"id":"20260415_4mgcn","date":"2026-04-15","qty":6347,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":5,"selfCases":6347,"extTrips":0,"extCases":0,"totalCases":6347,"savedAt":"2026-06-12T09:41:17.043339"},{"id":"20260416_pn2z9","date":"2026-04-16","qty":24155,"allowance":2530,"parking":200,"cashDelivery":640,"totalCost":3370,"shopee":1119,"popTrips":7,"popCases":396,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":22640,"extTrips":0,"extCases":0,"totalCases":24155,"savedAt":"2026-06-12T09:41:17.043356"},{"id":"20260417_fhqel","date":"2026-04-17","qty":36461,"allowance":3790,"parking":240,"cashDelivery":2356,"totalCost":6386,"shopee":282,"popTrips":8,"popCases":703,"m6Trips":1,"m6Cases":248,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":34,"selfCases":32247,"extTrips":1,"extCases":2981,"totalCases":36461,"savedAt":"2026-06-12T09:41:17.043374"},{"id":"20260418_ihrow","date":"2026-04-18","qty":14253,"allowance":2900,"parking":430,"cashDelivery":0,"totalCost":3330,"shopee":74,"popTrips":6,"popCases":361,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":13818,"extTrips":0,"extCases":0,"totalCases":14253,"savedAt":"2026-06-12T09:41:17.043392"},{"id":"20260420_iz3ky","date":"2026-04-20","qty":28720,"allowance":3530,"parking":300,"cashDelivery":95144,"totalCost":98974,"shopee":785,"popTrips":4,"popCases":467,"m6Trips":1,"m6Cases":196,"l6Trips":1,"l6Cases":432,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":25207,"extTrips":1,"extCases":1633,"totalCases":28720,"savedAt":"2026-06-12T09:41:17.043421"},{"id":"20260421_b9ca8","date":"2026-04-21","qty":26039,"allowance":5360,"parking":635,"cashDelivery":0,"totalCost":5995,"shopee":279,"popTrips":5,"popCases":344,"m6Trips":2,"m6Cases":397,"l6Trips":2,"l6Cases":805,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":21831,"extTrips":1,"extCases":2383,"totalCases":26039,"savedAt":"2026-06-12T09:41:17.043440"},{"id":"20260422_wlvk0","date":"2026-04-22","qty":23381,"allowance":4560,"parking":205,"cashDelivery":2658,"totalCost":7423,"shopee":185,"popTrips":6,"popCases":338,"m6Trips":2,"m6Cases":359,"l6Trips":1,"l6Cases":726,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":21773,"extTrips":0,"extCases":0,"totalCases":23381,"savedAt":"2026-06-12T09:41:17.043459"},{"id":"20260423_0j68v","date":"2026-04-23","qty":12504,"allowance":6530,"parking":590,"cashDelivery":5219,"totalCost":12339,"shopee":242,"popTrips":11,"popCases":828,"m6Trips":1,"m6Cases":241,"l6Trips":2,"l6Cases":901,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":9291,"extTrips":1,"extCases":1001,"totalCases":12504,"savedAt":"2026-06-12T09:41:17.043479"},{"id":"20260424_q61wm","date":"2026-04-24","qty":24418,"allowance":4430,"parking":355,"cashDelivery":0,"totalCost":4785,"shopee":197,"popTrips":8,"popCases":630,"m6Trips":1,"m6Cases":301,"l6Trips":2,"l6Cases":965,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":35,"selfCases":21150,"extTrips":1,"extCases":1175,"totalCases":24418,"savedAt":"2026-06-12T09:41:17.043496"},{"id":"20260425_lzr4k","date":"2026-04-25","qty":24619,"allowance":4900,"parking":1630,"cashDelivery":7002,"totalCost":13532,"shopee":35,"popTrips":6,"popCases":614,"m6Trips":0,"m6Cases":0,"l6Trips":3,"l6Cases":1154,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":22816,"extTrips":0,"extCases":0,"totalCases":24619,"savedAt":"2026-06-12T09:41:17.043513"},{"id":"20260427_d42vz","date":"2026-04-27","qty":21350,"allowance":4860,"parking":550,"cashDelivery":0,"totalCost":5410,"shopee":533,"popTrips":7,"popCases":670,"m6Trips":2,"m6Cases":278,"l6Trips":2,"l6Cases":1199,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":14,"selfCases":18670,"extTrips":0,"extCases":0,"totalCases":21350,"savedAt":"2026-06-12T09:41:17.043543"},{"id":"20260428_asmdh","date":"2026-04-28","qty":20737,"allowance":4440,"parking":310,"cashDelivery":0,"totalCost":4750,"shopee":296,"popTrips":6,"popCases":572,"m6Trips":1,"m6Cases":230,"l6Trips":1,"l6Cases":547,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":17114,"extTrips":1,"extCases":1978,"totalCases":20737,"savedAt":"2026-06-12T09:41:17.043560"},{"id":"20260429_3gh6n","date":"2026-04-29","qty":28357,"allowance":5240,"parking":940,"cashDelivery":0,"totalCost":6180,"shopee":298,"popTrips":6,"popCases":464,"m6Trips":2,"m6Cases":500,"l6Trips":2,"l6Cases":1178,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":24589,"extTrips":1,"extCases":1328,"totalCases":28357,"savedAt":"2026-06-12T09:41:17.043577"},{"id":"20260430_3nlyi","date":"2026-04-30","qty":25605,"allowance":6830,"parking":540,"cashDelivery":6788,"totalCost":14158,"shopee":375,"popTrips":5,"popCases":412,"m6Trips":1,"m6Cases":257,"l6Trips":3,"l6Cases":1228,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":19,"selfCases":18952,"extTrips":2,"extCases":4381,"totalCases":25605,"savedAt":"2026-06-12T09:41:17.043594"},{"id":"20260501_arbvq","date":"2026-05-01","qty":9590,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":7,"selfCases":9590,"extTrips":0,"extCases":0,"totalCases":9590,"savedAt":"2026-06-12T09:41:17.043622"},{"id":"20260502_klevm","date":"2026-05-02","qty":15641,"allowance":3730,"parking":445,"cashDelivery":0,"totalCost":4175,"shopee":81,"popTrips":11,"popCases":725,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":14835,"extTrips":0,"extCases":0,"totalCases":15641,"savedAt":"2026-06-12T09:41:17.043658"},{"id":"20260504_nrexz","date":"2026-05-04","qty":20531,"allowance":3590,"parking":65,"cashDelivery":0,"totalCost":3655,"shopee":586,"popTrips":4,"popCases":277,"m6Trips":2,"m6Cases":443,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":12,"selfCases":19225,"extTrips":0,"extCases":0,"totalCases":20531,"savedAt":"2026-06-12T09:41:17.043696"},{"id":"20260505_cgn05","date":"2026-05-05","qty":23175,"allowance":4700,"parking":280,"cashDelivery":0,"totalCost":4980,"shopee":400,"popTrips":7,"popCases":425,"m6Trips":1,"m6Cases":169,"l6Trips":3,"l6Cases":1559,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":25,"selfCases":19146,"extTrips":1,"extCases":1476,"totalCases":23175,"savedAt":"2026-06-12T09:41:17.043713"},{"id":"20260506_zr2ad","date":"2026-05-06","qty":29198,"allowance":4350,"parking":520,"cashDelivery":4044,"totalCost":8914,"shopee":467,"popTrips":9,"popCases":924,"m6Trips":2,"m6Cases":408,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":22,"selfCases":27399,"extTrips":0,"extCases":0,"totalCases":29198,"savedAt":"2026-06-12T09:41:17.043733"},{"id":"20260507_myvoo","date":"2026-05-07","qty":18022,"allowance":4750,"parking":685,"cashDelivery":0,"totalCost":5435,"shopee":267,"popTrips":6,"popCases":520,"m6Trips":3,"m6Cases":751,"l6Trips":2,"l6Cases":880,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":15604,"extTrips":0,"extCases":0,"totalCases":18022,"savedAt":"2026-06-12T09:41:17.043751"},{"id":"20260508_dotiw","date":"2026-05-08","qty":25264,"allowance":4240,"parking":690,"cashDelivery":0,"totalCost":4930,"shopee":315,"popTrips":8,"popCases":799,"m6Trips":1,"m6Cases":283,"l6Trips":1,"l6Cases":511,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":27,"selfCases":20624,"extTrips":2,"extCases":2732,"totalCases":25264,"savedAt":"2026-06-12T09:41:17.043769"},{"id":"20260509_jvlts","date":"2026-05-09","qty":11644,"allowance":3860,"parking":330,"cashDelivery":0,"totalCost":4190,"shopee":48,"popTrips":6,"popCases":351,"m6Trips":1,"m6Cases":259,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":9,"selfCases":10986,"extTrips":0,"extCases":0,"totalCases":11644,"savedAt":"2026-06-12T09:41:17.043785"},{"id":"20260511_av060","date":"2026-05-11","qty":18574,"allowance":3750,"parking":245,"cashDelivery":725,"totalCost":4720,"shopee":538,"popTrips":6,"popCases":614,"m6Trips":2,"m6Cases":497,"l6Trips":2,"l6Cases":700,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":12,"selfCases":16225,"extTrips":0,"extCases":0,"totalCases":18574,"savedAt":"2026-06-12T09:41:17.043816"},{"id":"20260512_znilp","date":"2026-05-12","qty":19651,"allowance":3750,"parking":380,"cashDelivery":0,"totalCost":4130,"shopee":255,"popTrips":8,"popCases":824,"m6Trips":1,"m6Cases":408,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":18164,"extTrips":0,"extCases":0,"totalCases":19651,"savedAt":"2026-06-12T09:41:17.043833"},{"id":"20260513_n43k6","date":"2026-05-13","qty":28931,"allowance":5090,"parking":196,"cashDelivery":0,"totalCost":5286,"shopee":185,"popTrips":3,"popCases":226,"m6Trips":2,"m6Cases":367,"l6Trips":3,"l6Cases":1214,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":26939,"extTrips":0,"extCases":0,"totalCases":28931,"savedAt":"2026-06-12T09:41:17.043850"},{"id":"20260514_58t4q","date":"2026-05-14","qty":18444,"allowance":4730,"parking":420,"cashDelivery":0,"totalCost":5150,"shopee":196,"popTrips":8,"popCases":552,"m6Trips":1,"m6Cases":298,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":12112,"extTrips":2,"extCases":5286,"totalCases":18444,"savedAt":"2026-06-12T09:41:17.043869"},{"id":"20260515_fbvbq","date":"2026-05-15","qty":21276,"allowance":5830,"parking":495,"cashDelivery":0,"totalCost":6325,"shopee":176,"popTrips":6,"popCases":587,"m6Trips":2,"m6Cases":454,"l6Trips":3,"l6Cases":1210,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":29,"selfCases":15855,"extTrips":2,"extCases":2994,"totalCases":21276,"savedAt":"2026-06-12T09:41:17.043887"},{"id":"20260516_rkpyu","date":"2026-05-16","qty":12844,"allowance":3960,"parking":370,"cashDelivery":0,"totalCost":4330,"shopee":37,"popTrips":8,"popCases":722,"m6Trips":2,"m6Cases":606,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":11,"selfCases":11479,"extTrips":0,"extCases":0,"totalCases":12844,"savedAt":"2026-06-12T09:41:17.043906"},{"id":"20260518_o1p8n","date":"2026-05-18","qty":18157,"allowance":2500,"parking":1150,"cashDelivery":19279,"totalCost":22929,"shopee":359,"popTrips":4,"popCases":190,"m6Trips":1,"m6Cases":199,"l6Trips":1,"l6Cases":494,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":16915,"extTrips":0,"extCases":0,"totalCases":18157,"savedAt":"2026-06-12T09:41:17.043935"},{"id":"20260519_nigoi","date":"2026-05-19","qty":24120,"allowance":4830,"parking":290,"cashDelivery":0,"totalCost":5120,"shopee":176,"popTrips":8,"popCases":858,"m6Trips":1,"m6Cases":218,"l6Trips":1,"l6Cases":485,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":30,"selfCases":22383,"extTrips":0,"extCases":0,"totalCases":24120,"savedAt":"2026-06-12T09:41:17.043953"},{"id":"20260520_jc41t","date":"2026-05-20","qty":34218,"allowance":4840,"parking":775,"cashDelivery":0,"totalCost":5615,"shopee":179,"popTrips":8,"popCases":771,"m6Trips":2,"m6Cases":419,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":19,"selfCases":25861,"extTrips":4,"extCases":6988,"totalCases":34218,"savedAt":"2026-06-12T09:41:17.043970"},{"id":"20260521_dgs3f","date":"2026-05-21","qty":15090,"allowance":4750,"parking":405,"cashDelivery":0,"totalCost":5155,"shopee":187,"popTrips":7,"popCases":559,"m6Trips":1,"m6Cases":192,"l6Trips":2,"l6Cases":956,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":13196,"extTrips":0,"extCases":0,"totalCases":15090,"savedAt":"2026-06-12T09:41:17.043988"},{"id":"20260522_ir35m","date":"2026-05-22","qty":19293,"allowance":5430,"parking":540,"cashDelivery":3452,"totalCost":9422,"shopee":163,"popTrips":8,"popCases":686,"m6Trips":1,"m6Cases":164,"l6Trips":2,"l6Cases":706,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":25,"selfCases":16011,"extTrips":1,"extCases":1563,"totalCases":19293,"savedAt":"2026-06-12T09:41:17.044005"},{"id":"20260523_plgpr","date":"2026-05-23","qty":15149,"allowance":3860,"parking":290,"cashDelivery":0,"totalCost":4150,"shopee":30,"popTrips":5,"popCases":403,"m6Trips":0,"m6Cases":0,"l6Trips":1,"l6Cases":313,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":11,"selfCases":14403,"extTrips":0,"extCases":0,"totalCases":15149,"savedAt":"2026-06-12T09:41:17.044024"},{"id":"20260525_j90v4","date":"2026-05-25","qty":18738,"allowance":3990,"parking":595,"cashDelivery":3023,"totalCost":7608,"shopee":546,"popTrips":7,"popCases":792,"m6Trips":3,"m6Cases":703,"l6Trips":1,"l6Cases":608,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":15,"selfCases":16089,"extTrips":0,"extCases":0,"totalCases":18738,"savedAt":"2026-06-12T09:41:17.044053"},{"id":"20260526_qb7ii","date":"2026-05-26","qty":19359,"allowance":5820,"parking":435,"cashDelivery":1404,"totalCost":7659,"shopee":443,"popTrips":10,"popCases":935,"m6Trips":2,"m6Cases":350,"l6Trips":2,"l6Cases":732,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":27,"selfCases":15828,"extTrips":1,"extCases":1071,"totalCases":19359,"savedAt":"2026-06-12T09:41:17.044071"},{"id":"20260527_dvgis","date":"2026-05-27","qty":33019,"allowance":5200,"parking":605,"cashDelivery":0,"totalCost":5805,"shopee":316,"popTrips":9,"popCases":839,"m6Trips":2,"m6Cases":497,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":28728,"extTrips":1,"extCases":2639,"totalCases":33019,"savedAt":"2026-06-12T09:41:17.044089"},{"id":"20260528_85plw","date":"2026-05-28","qty":25636,"allowance":5620,"parking":425,"cashDelivery":0,"totalCost":6045,"shopee":252,"popTrips":8,"popCases":740,"m6Trips":3,"m6Cases":525,"l6Trips":1,"l6Cases":362,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":20,"selfCases":18749,"extTrips":2,"extCases":5008,"totalCases":25636,"savedAt":"2026-06-12T09:41:17.044106"},{"id":"20260529_7xqui","date":"2026-05-29","qty":20063,"allowance":4560,"parking":945,"cashDelivery":648,"totalCost":6153,"shopee":294,"popTrips":7,"popCases":490,"m6Trips":2,"m6Cases":567,"l6Trips":1,"l6Cases":593,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":31,"selfCases":16789,"extTrips":1,"extCases":1330,"totalCases":20063,"savedAt":"2026-06-12T09:41:17.044124"},{"id":"20260530_tuvw9","date":"2026-05-30","qty":18856,"allowance":5060,"parking":375,"cashDelivery":0,"totalCost":5435,"shopee":64,"popTrips":5,"popCases":393,"m6Trips":2,"m6Cases":626,"l6Trips":3,"l6Cases":2385,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":15388,"extTrips":0,"extCases":0,"totalCases":18856,"savedAt":"2026-06-12T09:41:17.044141"},{"id":"20260601_iyctf","date":"2026-06-01","qty":9125,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":0,"popTrips":0,"popCases":0,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":6,"selfCases":9125,"extTrips":0,"extCases":0,"totalCases":9125,"savedAt":"2026-06-12T09:41:17.044182"},{"id":"20260602_74wag","date":"2026-06-02","qty":28989,"allowance":5290,"parking":300,"cashDelivery":0,"totalCost":5590,"shopee":886,"popTrips":6,"popCases":561,"m6Trips":2,"m6Cases":460,"l6Trips":1,"l6Cases":531,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":17,"selfCases":19978,"extTrips":3,"extCases":6573,"totalCases":28989,"savedAt":"2026-06-12T09:41:17.044200"},{"id":"20260603_wdvbf","date":"2026-06-03","qty":40473,"allowance":3880,"parking":175,"cashDelivery":0,"totalCost":4055,"shopee":727,"popTrips":7,"popCases":631,"m6Trips":1,"m6Cases":100,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":23,"selfCases":33616,"extTrips":2,"extCases":5399,"totalCases":40473,"savedAt":"2026-06-12T09:41:17.044218"},{"id":"20260604_i2tmi","date":"2026-06-04","qty":22639,"allowance":5150,"parking":905,"cashDelivery":0,"totalCost":6055,"shopee":1155,"popTrips":6,"popCases":369,"m6Trips":3,"m6Cases":831,"l6Trips":1,"l6Cases":609,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":18,"selfCases":18715,"extTrips":1,"extCases":960,"totalCases":22639,"savedAt":"2026-06-12T09:41:17.044236"},{"id":"20260605_cja95","date":"2026-06-05","qty":30178,"allowance":4470,"parking":413,"cashDelivery":0,"totalCost":4883,"shopee":736,"popTrips":5,"popCases":454,"m6Trips":2,"m6Cases":482,"l6Trips":2,"l6Cases":1270,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":36,"selfCases":22368,"extTrips":2,"extCases":4868,"totalCases":30178,"savedAt":"2026-06-12T09:41:17.044254"},{"id":"20260606_rhvi1","date":"2026-06-06","qty":10763,"allowance":3380,"parking":460,"cashDelivery":1400,"totalCost":5240,"shopee":136,"popTrips":8,"popCases":486,"m6Trips":2,"m6Cases":326,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":9815,"extTrips":0,"extCases":0,"totalCases":10763,"savedAt":"2026-06-12T09:41:17.044271"},{"id":"20260608_ch6c0","date":"2026-06-08","qty":20554,"allowance":3260,"parking":295,"cashDelivery":0,"totalCost":3555,"shopee":2358,"popTrips":7,"popCases":743,"m6Trips":0,"m6Cases":0,"l6Trips":1,"l6Cases":369,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":18,"selfCases":17084,"extTrips":0,"extCases":0,"totalCases":20554,"savedAt":"2026-06-12T09:41:17.044300"},{"id":"20260609_zkdjo","date":"2026-06-09","qty":20786,"allowance":5450,"parking":400,"cashDelivery":0,"totalCost":5850,"shopee":400,"popTrips":5,"popCases":375,"m6Trips":2,"m6Cases":350,"l6Trips":2,"l6Cases":714,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":28,"selfCases":16432,"extTrips":2,"extCases":2515,"totalCases":20786,"savedAt":"2026-06-12T09:41:17.044318"},{"id":"20260610_2crue","date":"2026-06-10","qty":29398,"allowance":6370,"parking":450,"cashDelivery":58112,"totalCost":64932,"shopee":305,"popTrips":12,"popCases":1085,"m6Trips":2,"m6Cases":464,"l6Trips":2,"l6Cases":827,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":21,"selfCases":24130,"extTrips":1,"extCases":2587,"totalCases":29398,"savedAt":"2026-06-12T09:41:17.044335"},{"id":"20260611_74io2","date":"2026-06-11","qty":11810,"allowance":4310,"parking":570,"cashDelivery":0,"totalCost":4880,"shopee":336,"popTrips":9,"popCases":692,"m6Trips":0,"m6Cases":0,"l6Trips":2,"l6Cases":899,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":13,"selfCases":9883,"extTrips":0,"extCases":0,"totalCases":11810,"savedAt":"2026-06-12T09:41:17.044387"},{"id":"20260612_w5qdf","date":"2026-06-12","qty":316,"allowance":0,"parking":0,"cashDelivery":0,"totalCost":0,"shopee":308,"popTrips":0,"popCases":8,"m6Trips":0,"m6Cases":0,"l6Trips":0,"l6Cases":0,"domTrips":0,"domCases":0,"intlTrips":0,"intlCases":0,"selfTrips":0,"selfCases":0,"extTrips":0,"extCases":0,"totalCases":316,"savedAt":"2026-06-12T09:41:17.044407"}];
+
+// ──────────────────────────────────────
+// INIT
+// ──────────────────────────────────────
+loadLocal();
+
+// โหลดข้อมูล preload ถ้า localStorage ยังไม่มีข้อมูล
+if (records.length === 0 && PRELOAD_DATA.length > 0) {
+  records = PRELOAD_DATA.slice();
+  records.sort(function(a,b){ return a.date.localeCompare(b.date); });
+  saveLocal();
+}
+
+el('f-date').value = todayStr();
+
+// ตั้งค่า default range เป็นสัปดาห์นี้
+(function(){
+  var now = new Date();
+  var dw = now.getDay(); var diff = dw === 0 ? -6 : 1 - dw;
+  var ws = new Date(now); ws.setDate(now.getDate() + diff);
+  rangeFrom = ws.toISOString().slice(0,10);
+  rangeTo   = todayStr();
+  el('ov-from').value = rangeFrom;
+  el('ov-to').value   = rangeTo;
+  // mark สัปดาห์นี้ button
+  var qbtns = document.querySelectorAll('.quick-btn');
+  if(qbtns.length) qbtns[0].classList.add('on');
+  updateRangeSummary();
+})();
+
+// Banner initial state
+if (getGasUrl()) {
+  el('conn-banner').className = 'ok';
+  el('conn-banner').textContent = '✅ เชื่อมต่อ Google Sheets แล้ว';
+} else {
+  updateBanner();
+}
+
+refreshAll();
+setTimeout(testConnection, 1200);
+
+// ── Auto-sync every 5 minutes ──
+(function startAutoSync() {
+  var AUTO_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  var syncTimer = null;
+
+  function autoSync() {
+    if (!getGasUrl()) return; // skip if no GAS URL
+    var url = getGasUrl();
+    fetch(url + '?action=fetch_daily')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && d.rows) {
+          var sheetRows = d.rows.map(function(r){ r.date = normalizeDate(r.date); return r; });
+          var idMap = {};
+          sheetRows.forEach(function(r){ idMap[r.id] = true; });
+          var merged = sheetRows.slice();
+          records.forEach(function(r){ if (!idMap[r.id]) merged.push(r); });
+          merged.sort(function(a,b){ return a.date.localeCompare(b.date); });
+          var changed = JSON.stringify(merged) !== JSON.stringify(records);
+          if (changed) {
+            records = merged;
+            saveLocal();
+            refreshAll();
+            showToast('🔄 อัปเดตอัตโนมัติแล้วค่ะ');
+          }
+        }
+      })
+      .catch(function(){});
+  }
+
+  // Start polling
+  syncTimer = setInterval(autoSync, AUTO_INTERVAL);
+
+  // Also update countdown in banner
+  var countdown = AUTO_INTERVAL / 1000;
+  setInterval(function(){
+    countdown--;
+    if (countdown <= 0) countdown = AUTO_INTERVAL / 1000;
+  }, 1000);
+})();
+</script>
+</body>
+</html>
