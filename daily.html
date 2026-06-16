@@ -517,8 +517,9 @@ function saveLocal() {
 // ──────────────────────────────────────
 // GAS URL
 // ──────────────────────────────────────
+var DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyRpW3Q5gUsBtc-uxxm5ZsqFeiePzf9ruQhE_uS2hWgWG3ZyMkawbxRI1KrXy6EX22fgw/exec';
 function getGasUrl() {
-  try { return localStorage.getItem(LS_GAS) || ''; } catch (e) { return ''; }
+  try { return localStorage.getItem(LS_GAS) || DEFAULT_GAS_URL; } catch (e) { return DEFAULT_GAS_URL; }
 }
 
 function openGasModal() {
@@ -1193,6 +1194,9 @@ var PRELOAD_DATA = [{"id":"voz4jozci4","date":"2025-12-29","qty":16413,"shopee":
 // INIT
 // ──────────────────────────────────────
 loadLocal();
+
+// Auto-connect to Google Sheets on startup
+setTimeout(function(){ if(getGasUrl()) fetchFromSheets(); }, 800);
 
 // โหลดข้อมูล preload ถ้า localStorage ยังไม่มีข้อมูล
 if (records.length === 0 && PRELOAD_DATA.length > 0) {
