@@ -538,13 +538,15 @@ function closeAgeBandPopup(){
 }
 
 // Populate date selector
-const sel=document.getElementById('date-sel');
-ALL_DATES.slice().reverse().forEach(function(d){
-  const o=document.createElement('option');
-  o.value=d; o.textContent=d.replace('.','/').replace('.','/');
-  if(d===curDate) o.selected=true;
-  sel.appendChild(o);
-});
+try{
+  const sel=document.getElementById('date-sel');
+  if(sel) ALL_DATES.slice().reverse().forEach(function(d){
+    const o=document.createElement('option');
+    o.value=d; o.textContent=d.replace('.','/').replace('.','/');
+    if(d===curDate) o.selected=true;
+    sel.appendChild(o);
+  });
+}catch(e2){console.warn('date-sel populate error:',e2);}
 
 function numF(n,d=0){if(n===null||n===undefined||n==='')return'–';return Number(n).toLocaleString('th-TH',{maximumFractionDigits:d});}
 
@@ -1193,8 +1195,7 @@ function exportWatchExcel(){
         ].map(esc).join(','));
       }
     });
-    const csv='﻿'+lines.join('
-');
+    const csv='﻿'+lines.join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -1802,9 +1803,9 @@ function testSheetsConnection(){
       localStorage.setItem(gasKey, 'https://script.google.com/macros/s/AKfycbyvmBJrM8103MLuxZNYd2_hlXjsk_qEufh5GgD0J7u1xL-76k0rh_dH-X4AgfDyiXwT/exec');
     }
   }catch(e){}
-  applyWatchCustCls();
-  buildWatch();
-  buildOld();
+  try{ applyWatchCustCls(); }catch(e3){ console.warn('applyWatchCustCls error:',e3); }
+  try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
+  try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
   var banner = document.getElementById('conn-banner');
   if(banner && (function(){ try{ return localStorage.getItem('wh10_gas_url'); }catch(e){ return ''; } })()){
     banner.className = 'ok';
