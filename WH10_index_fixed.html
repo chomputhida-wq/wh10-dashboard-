@@ -1193,13 +1193,16 @@ function exportWatchExcel(){
       );
     }
   });
-  const ws=XLSX.utils.aoa_to_sheet(data);
+  // Sanitize: replace null/undefined with empty string so XLSX won't crash
+  const safeData=data.map(function(row){return row.map(function(v){return(v===null||v===undefined)?'':v;});});
+  const ws=XLSX.utils.aoa_to_sheet(safeData);
   ws['!cols']=[{wch:20},{wch:35},{wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},
                {wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},
                {wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},{wch:15},{wch:30}];
   const wb2=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb2,'เฝ้าระวัง_7-11',ws);
-  XLSX.writeFile(wb2,'สินค้า7-11_เฝ้าระวัง_'+(curDate||watchDate).replace(/\./g,'')+'.xlsx');
+  XLSX.utils.book_append_sheet(wb2,'Watch',ws);
+  const safeDate=(curDate||watchDate||'').replace(/[\.\/:*?<>|]/g,'');
+  XLSX.writeFile(wb2,'WH10_Watch_'+safeDate+'.xlsx');
   }catch(e){alert('Export ผิดพลาด: '+e.message);}
 }
 
