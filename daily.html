@@ -698,13 +698,13 @@ function saveRecord() {
   var editId = el('edit-id').value;
   var totalCases = VEH_KEYS.reduce(function (s, k) {
     return s + (parseFloat(el('v-' + k + '-c').value) || 0);
-  }, 0);
+  }, 0) + (numVal('f-shopee') || 0);
   var totalCost = numVal('f-allowance') + numVal('f-parking') + numVal('f-cash');
 
   var rec = {
     id: editId || genId(),
     date: date,
-    qty: numVal('f-qty'),
+    qty: totalCases,
     shopee: numVal('f-shopee'),
     allowance: numVal('f-allowance'),
     parking: numVal('f-parking'),
@@ -770,7 +770,7 @@ function buildHistory() {
       '<td class="num">' + fmt(r.shopee) + '</td>' +
       '<td class="num">' + fmt(r.totalCost) + '</td>' +
       vcells +
-      '<td class="num bold">' + fmt((r.totalCases||0)+(r.shopee||0)) + '</td>' +
+      '<td class="num bold">' + fmt(r.totalCases) + '</td>' +
       '<td class="ctr">' +
         '<button class="btn btn-ghost btn-sm" onclick="fillForm(getRecord(\'' + r.id + '\'))">✏️</button> ' +
         '<button class="btn btn-red btn-sm" onclick="deleteRecord(\'' + r.id + '\')">🗑️</button>' +
@@ -781,7 +781,7 @@ function buildHistory() {
   // Summary row
   var totQty   = rows.reduce(function (s, r) { return s + (r.qty || 0); }, 0);
   var totCost  = rows.reduce(function (s, r) { return s + (r.totalCost || 0); }, 0);
-  var totCases = rows.reduce(function (s, r) { return s + (r.totalCases||0) + (r.shopee||0); }, 0);
+  var totCases = rows.reduce(function (s, r) { return s + (r.totalCases || 0); }, 0);
   var totShopee= rows.reduce(function (s, r) { return s + (r.shopee || 0); }, 0);
 
   el('hist-summary').innerHTML =
@@ -805,7 +805,7 @@ function buildMonthlySummary(rows) {
     months[ym].qty   += (r.qty || 0);
     months[ym].shopee+= (r.shopee || 0);
     months[ym].cost  += (r.totalCost || 0);
-    months[ym].cases += (r.totalCases||0) + (r.shopee||0);
+    months[ym].cases += (r.totalCases || 0);
   });
 
   var keys = Object.keys(months).sort();
@@ -941,7 +941,7 @@ function buildKPI() {
   var totShopee= recs.reduce(function(s,r){ return s+(r.shopee||0); },0);
   var totCases = recs.reduce(function(s,r){ return s+(r.totalCases||0); },0);
   var totCost  = recs.reduce(function(s,r){ return s+(r.totalCost||0); },0);
-  el('kpi-today').textContent = fmt(totQty + totShopee);
+  el('kpi-today').textContent = fmt(totQty);
   el('kpi-week').textContent  = fmt(totShopee);
   el('kpi-month').textContent = fmt(totCases);
   el('kpi-cost').textContent  = fmt(totCost);
@@ -967,7 +967,7 @@ function buildRecent() {
       '<td class="num">' + fmt(r.shopee) + '</td>' +
       vc('pop')+vc('m6')+vc('l6')+vc('dom')+vc('intl')+vc('self')+vc('ext')+
       '<td class="num">' + fmt(r.totalCost) + '</td>' +
-      '<td class="num" style="font-weight:700;color:#d97706">' + fmt((r.totalCases||0)+(r.shopee||0)) + '</td>' +
+      '<td class="num" style="font-weight:700;color:#d97706">' + fmt(r.totalCases) + '</td>' +
     '</tr>';
   }).join('');
 
