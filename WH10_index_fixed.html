@@ -1166,44 +1166,44 @@ function parseWatchSheet(ws){
   return items;
 }
 
-// Export watch table to Excel
+// Export watch table to CSV (Excel-compatible, no library needed)
 function exportWatchExcel(){
   const rows=(curDate===watchDate&&WATCH_LIVE.length)?WATCH_LIVE:(WATCH_ALL[curDate]||[]);
   if(!rows||!rows.length){alert('ไม่มีข้อมูลสำหรับวันที่ที่เลือกค่ะ');return;}
-  if(typeof XLSX==='undefined'){alert('โหลด Library ไม่สำเร็จ\nกรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรชหน้าใหม่ค่ะ');return;}
   try{
-  const REASONS=loadReasons();
-  const hdr1=['Material','ชื่อสินค้า',
-    'Batch(46-60)','ลัง(46-60)','หมดอายุ(46-60)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ',
-    'Batch(61-90)','ลัง(61-90)','หมดอายุ(61-90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ',
-    'Batch(>90)','ลัง(>90)','หมดอายุ(>90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ','ลูกค้า','หมายเหตุ/หมายเหตุ'];
-  const data=[hdr1];
-  rows.forEach(function(r){
-    const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
-    const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
-    const REASONS2=loadReasons();
-    for(let ri=0;ri<maxR;ri++){
-      const e={batch:'',lang:'',exp:'',age711:'',remain:'',note:''};
-      const b46=b46s[ri]||e, b61=b61s[ri]||e, b90=b90s[ri]||e;
-      data.push([ri===0?r.mat:'',ri===0?r.desc:'',
-        b46.batch,b46.lang,b46.exp,b46.age711,b46.remain,b46.note||'',
-        b61.batch,b61.lang,b61.exp,b61.age711,b61.remain,b61.note||'',
-        b90.batch,b90.lang,b90.exp,b90.age711,b90.remain,b90.note||'',
-        ri===0?r.customer:'',ri===0?(REASONS2[r.mat]||''):'']
-      );
-    }
-  });
-  // Sanitize: replace null/undefined with empty string so XLSX won't crash
-  const safeData=data.map(function(row){return row.map(function(v){return(v===null||v===undefined)?'':v;});});
-  const ws=XLSX.utils.aoa_to_sheet(safeData);
-  ws['!cols']=[{wch:20},{wch:35},{wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},
-               {wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},
-               {wch:12},{wch:8},{wch:12},{wch:14},{wch:12},{wch:15},{wch:15},{wch:30}];
-  const wb2=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb2,'Watch',ws);
-  const safeDate=(curDate||watchDate||'').replace(/[\.\/:*?<>|]/g,'');
-  XLSX.writeFile(wb2,'WH10_Watch_'+safeDate+'.xlsx');
-  }catch(e){alert('Export ผิดพลาด: '+e.message);}
+    const REASONS=loadReasons();
+    const hdr=['Material','ชื่อสินค้า',
+      'Batch(46-60)','ลัง(46-60)','หมดอายุ(46-60)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(46-60)',
+      'Batch(61-90)','ลัง(61-90)','หมดอายุ(61-90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(61-90)',
+      'Batch(>90)','ลัง(>90)','หมดอายุ(>90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(>90)','ลูกค้า','หมายเหตุ'];
+    function esc(v){v=(v===null||v===undefined)?'':String(v);return '"'+v.replace(/"/g,'""')+'"';}
+    const lines=[hdr.map(esc).join(',')];
+    rows.forEach(function(r){
+      const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
+      const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
+      for(let ri=0;ri<maxR;ri++){
+        const em={batch:'',lang:'',exp:'',age711:'',remain:'',note:''};
+        const b46=b46s[ri]||em,b61=b61s[ri]||em,b90=b90s[ri]||em;
+        lines.push([
+          ri===0?r.mat:'',ri===0?r.desc:'',
+          b46.batch,b46.lang,b46.exp,b46.age711,b46.remain,b46.note||'',
+          b61.batch,b61.lang,b61.exp,b61.age711,b61.remain,b61.note||'',
+          b90.batch,b90.lang,b90.exp,b90.age711,b90.remain,b90.note||'',
+          ri===0?r.customer:'',ri===0?(REASONS[r.mat]||''):''
+        ].map(esc).join(','));
+      }
+    });
+    const csv='﻿'+lines.join('
+');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    const safeDate=(curDate||watchDate||'').replace(/[\/:\*?<>|]/g,'');
+    a.download='WH10_Watch_'+safeDate+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(err){alert('Export ผิดพลาด: '+err.message);}
 }
 
 // ── EXPORT PDF ──
