@@ -693,7 +693,7 @@ function onReasonBlur(mat, el){
 }
 
 function saveWatchData(){
-  localStorage.setItem(LS_WATCH, JSON.stringify({data:WATCH_LIVE, date:watchDate, dates:watchDates}));
+  try{ localStorage.setItem(LS_WATCH, JSON.stringify({data:WATCH_LIVE, date:watchDate, dates:watchDates})); }catch(e){ console.warn('saveWatchData failed:',e); }
 }
 function loadWatchData(){
   try{const r=localStorage.getItem(LS_WATCH); return r?JSON.parse(r):null;}catch(e){return null;}
@@ -1028,6 +1028,8 @@ function uploadWatch(input){
         const wc=document.getElementById('watch-count');if(wc)wc.textContent=watchParsed.length+' รายการ';
         saveWatchData();
         pushToSheets(dateStr, watchParsed, old90Parsed);
+        watchQ=''; ageFilter='all'; custFilter='all';
+        const si2=document.getElementById('watch-search'); if(si2) si2.value='';
         applyWatchCustCls();
         buildWatch();
         buildUnclassifiedWatch();
@@ -1046,6 +1048,9 @@ function uploadWatch(input){
       const msg=(watchParsed.length?'✅ สินค้าเฝ้าระวัง: '+watchParsed.length+' รายการ\n':'')
                +(old90Parsed.length?'✅ สต็อก >90 วัน: '+old90Parsed.length+' รายการ\n':'')
                +'📅 วันที่: '+dateStr;
+      if(watchParsed.length||old90Parsed.length){
+        setTimeout(function(){ showSheetsToast('💾 อย่าลืมกด "บันทึกลง HTML" เพื่อบันทึกข้อมูลถาวรค่ะ', 6000); }, 500);
+      }
       alert(msg||'⚠️ ไม่พบข้อมูลในไฟล์ค่ะ');
     };
     rdW.readAsArrayBuffer(file);
@@ -1113,7 +1118,7 @@ function parseWatchFromXLS(text){
   }
   for(let i=0;i<lines.length;i++){
     const parts=lines[i].split('\t');
-    if(parts.length<27)continue;
+    if(parts.length<40)continue;
     const mat=st(parts[1]).replace(/﻿/g,'');
     const mat16candidate=st(parts[0]).replace(/﻿/g,'');
     const mat16=re16.test(mat16candidate)?mat16candidate:'';
@@ -1806,6 +1811,8 @@ function testSheetsConnection(){
   try{ applyWatchCustCls(); }catch(e3){ console.warn('applyWatchCustCls error:',e3); }
   try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
   try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
+  // Auto-fetch latest data from GAS on page load
+  try{ if(getGasUrl()) setTimeout(fetchFromSheets, 1000); }catch(e6){}
   var banner = document.getElementById('conn-banner');
   if(banner && (function(){ try{ return localStorage.getItem('wh10_gas_url'); }catch(e){ return ''; } })()){
     banner.className = 'ok';
