@@ -1033,6 +1033,7 @@ function uploadWatch(input){
         applyWatchCustCls();
         buildWatch();
         buildUnclassifiedWatch();
+        setTimeout(function(){ try{ saveWatchHTML(); }catch(e){} }, 2000);
       }
       if(old90Parsed.length){
         OLD90_LIVE=old90Parsed;
@@ -1049,7 +1050,7 @@ function uploadWatch(input){
                +(old90Parsed.length?'✅ สต็อก >90 วัน: '+old90Parsed.length+' รายการ\n':'')
                +'📅 วันที่: '+dateStr;
       if(watchParsed.length||old90Parsed.length){
-        setTimeout(function(){ showSheetsToast('💾 อย่าลืมกด "บันทึกลง HTML" เพื่อบันทึกข้อมูลถาวรค่ะ', 6000); }, 500);
+        setTimeout(function(){ showSheetsToast('💾 ✅ บันทึกข้อมูลอัตโนมัติแล้วค่ะ', 6000); }, 500);
       }
       alert(msg||'⚠️ ไม่พบข้อมูลในไฟล์ค่ะ');
     };
@@ -1093,6 +1094,7 @@ function uploadWatch(input){
       applyWatchCustCls();
       buildWatch();
       buildUnclassifiedWatch();
+      setTimeout(function(){ try{ saveWatchHTML(); }catch(e){} }, 2000);
       alert('✅ นำเข้าข้อมูลเรียบร้อยค่ะ!\n'+WATCH_LIVE.length+' รายการ | วันที่: '+latest);
     }catch(err){alert('เกิดข้อผิดพลาด: '+err.message+' \n'+err.stack);}
     if(bar) bar.style.display='none';
