@@ -1192,44 +1192,92 @@ function parseWatchSheet(ws){
   return items;
 }
 
-// Export watch table to CSV (Excel-compatible, no library needed)
+// Export watch table as formatted Excel (same layout as PDF)
 function exportWatchExcel(){
   const rows=(curDate===watchDate&&WATCH_LIVE.length)?WATCH_LIVE:(WATCH_ALL[curDate]||[]);
   if(!rows||!rows.length){alert('ไม่มีข้อมูลสำหรับวันที่ที่เลือกค่ะ');return;}
   try{
     const REASONS=loadReasons();
-    const hdr=['Material','ชื่อสินค้า',
-      'Batch(46-60)','ลัง(46-60)','หมดอายุ(46-60)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(46-60)',
-      'Batch(61-90)','ลัง(61-90)','หมดอายุ(61-90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(61-90)',
-      'Batch(>90)','ลัง(>90)','หมดอายุ(>90)','อายุส่ง7-11/วัน','เหลืออายุ/วัน','หมายเหตุ(>90)','ลูกค้า','หมายเหตุ'];
-    function esc(v){v=(v===null||v===undefined)?'':String(v);return '"'+v.replace(/"/g,'""')+'"';}
-    const lines=[hdr.map(esc).join(',')];
-    rows.forEach(function(r){
+    let filt=watchQ?rows.filter(r=>r.mat.toLowerCase().includes(watchQ)||r.desc.toLowerCase().includes(watchQ)):rows.slice();
+    if(ageFilter==='46') filt=filt.filter(r=>normB(r.b46).some(b=>b.lang>0));
+    else if(ageFilter==='61') filt=filt.filter(r=>normB(r.b61).some(b=>b.lang>0));
+    else if(ageFilter==='90') filt=filt.filter(r=>normB(r.b90).some(b=>b.lang>0));
+    if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||'').includes('7-Eleven'));
+    else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||'').includes('Makro'));
+    const dateStr=curDate||watchDate;
+    const totalLang46=sumBand(filt,'b46'),totalLang61=sumBand(filt,'b61'),totalLang90=sumBand(filt,'b90');
+    function bcells(b,color){
+      if(!b||(!b.batch&&!b.lang)) return '<td colspan="4" style="text-align:center;color:#aaa;border:1px solid #ddd;background:#fafafa">–</td>';
+      const rv=b.remain!=null?b.remain:null;
+      const rc=rv===null?'#777':rv<0?'#dc2626':rv<7?'#dc2626':rv<14?'#d97706':'#065f46';
+      const rb=rv!==null&&rv<14?'font-weight:700':'';
+      return '<td style="border:1px solid #ddd;padding:4px 6px;font-size:10px">'+(b.batch||'–')+'</td>'+
+             '<td style="border:1px solid #ddd;padding:4px 6px;text-align:right;font-weight:700;color:'+color+'">'+(b.lang!=null?Number(b.lang).toLocaleString():'–')+'</td>'+
+             '<td style="border:1px solid #ddd;padding:4px 6px;font-size:10px;text-align:center">'+(b.exp||'–')+'</td>'+
+             '<td style="border:1px solid #ddd;padding:4px 6px;text-align:center;color:'+rc+';'+rb+'">'+(rv!=null?rv+' วัน':'–')+'</td>';
+    }
+    var bodyRows='';
+    filt.forEach(function(r,i){
+      const bg=i%2===0?'#ffffff':'#f8fafc';
+      const custLabel=r.customer&&r.customer.includes('7-Eleven')?'7-11':r.customer&&r.customer.includes('Makro')?'Makro':'';
+      const custBadge=custLabel?'<span style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700;background:'+(custLabel==='7-11'?'#dbeafe;color:#1e40af':'#fee2e2;color:#991b1b')+'">'+custLabel+'</span>':'';
+      const reason=REASONS[r.mat]||'';
       const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
       const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
-      for(let ri=0;ri<maxR;ri++){
-        const em={batch:'',lang:'',exp:'',age711:'',remain:'',note:''};
-        const b46=b46s[ri]||em,b61=b61s[ri]||em,b90=b90s[ri]||em;
-        lines.push([
-          ri===0?r.mat:'',ri===0?r.desc:'',
-          b46.batch,b46.lang,b46.exp,b46.age711,b46.remain,b46.note||'',
-          b61.batch,b61.lang,b61.exp,b61.age711,b61.remain,b61.note||'',
-          b90.batch,b90.lang,b90.exp,b90.age711,b90.remain,b90.note||'',
-          ri===0?r.customer:'',ri===0?(REASONS[r.mat]||''):''
-        ].map(esc).join(','));
+      for(var ri=0;ri<maxR;ri++){
+        const isF=ri===0;
+        const b46=b46s[ri]||null,b61=b61s[ri]||null,b90=b90s[ri]||null;
+        bodyRows+='<tr style="background:'+(isF?bg:'#f0fdf4')+'">';
+        if(isF){
+          bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-family:monospace;font-size:9px;color:#555;vertical-align:top">'+r.mat+'</td>';
+          bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-size:10px;font-weight:600;color:#1e293b;vertical-align:top">'+r.desc+custBadge+'</td>';
+        }
+        bodyRows+=bcells(b46,'#854d0e')+bcells(b61,'#9a3412')+bcells(b90,'#991b1b');
+        if(isF) bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-size:10px;vertical-align:top">'+reason+'</td>';
+        bodyRows+='</tr>';
       }
     });
-    const csv='﻿'+lines.join('\r\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'+
+    '<head><meta charset="utf-8"><style>body{font-family:Tahoma,Arial,sans-serif;font-size:11px}table{border-collapse:collapse}th{font-weight:700;padding:5px 6px;font-size:9px;border:1px solid #ccc}</style></head><body>'+
+    '<table style="width:100%;margin-bottom:8px"><tr style="background:#1e3a5f">'+
+    '<td style="padding:10px 14px;font-size:14px;font-weight:800;color:#fff">📋 สินค้า 7-Eleven &amp; Makro เฝ้าระวัง (อาจเกินเกณฑ์การส่ง)</td>'+
+    '<td style="padding:10px 14px;text-align:right;font-size:10px;color:#e2e8f0">วันที่: '+dateStr+'<br>รายการ: '+filt.length+' SKU<br>ส่งออก: '+new Date().toLocaleString('th-TH')+'</td>'+
+    '</tr></table>'+
+    '<table style="margin-bottom:10px"><tr>'+
+    '<td style="padding:8px 12px;background:#fef9c3;border:2px solid #eab308;min-width:130px"><div style="font-size:9px;font-weight:700;color:#713f12">🟡 Batch 46-60 วัน</div><div style="font-size:18px;font-weight:800;color:#854d0e">'+totalLang46.toLocaleString()+' ลัง</div></td>'+
+    '<td style="width:6px"></td>'+
+    '<td style="padding:8px 12px;background:#ffedd5;border:2px solid #f97316;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7c2d12">🟠 Batch 61-90 วัน</div><div style="font-size:18px;font-weight:800;color:#9a3412">'+totalLang61.toLocaleString()+' ลัง</div></td>'+
+    '<td style="width:6px"></td>'+
+    '<td style="padding:8px 12px;background:#fee2e2;border:2px solid #ef4444;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7f1d1d">🔴 Batch &gt;90 วัน</div><div style="font-size:18px;font-weight:800;color:#991b1b">'+totalLang90.toLocaleString()+' ลัง</div></td>'+
+    '<td style="width:6px"></td>'+
+    '<td style="padding:8px 12px;background:#f1f5f9;border:2px solid #94a3b8;min-width:130px"><div style="font-size:9px;font-weight:700;color:#475569">📦 รวมทั้งหมด</div><div style="font-size:18px;font-weight:800;color:#1e3a5f">'+(totalLang46+totalLang61+totalLang90).toLocaleString()+' ลัง</div></td>'+
+    '</tr></table>'+
+    '<table><thead>'+
+    '<tr>'+
+    '<th rowspan="2" style="background:#1e3a5f;color:#fff;text-align:left;width:110px">Material</th>'+
+    '<th rowspan="2" style="background:#1e3a5f;color:#fff;text-align:left;width:160px">ชื่อสินค้า</th>'+
+    '<th colspan="4" style="background:#eab308;color:#fff">🟡 Batch 46-60 วัน</th>'+
+    '<th colspan="4" style="background:#f97316;color:#fff">🟠 Batch 61-90 วัน</th>'+
+    '<th colspan="4" style="background:#ef4444;color:#fff">🔴 Batch &gt;90 วัน</th>'+
+    '<th rowspan="2" style="background:#7c3aed;color:#fff;width:100px">✏️ หมายเหตุ</th>'+
+    '</tr><tr>'+
+    '<th style="background:#fef08a;color:#713f12">Batch No.</th><th style="background:#fef08a;color:#713f12">ลัง</th><th style="background:#fef08a;color:#713f12">วันหมดอายุ</th><th style="background:#fef08a;color:#713f12">เหลืออายุ</th>'+
+    '<th style="background:#fed7aa;color:#7c2d12">Batch No.</th><th style="background:#fed7aa;color:#7c2d12">ลัง</th><th style="background:#fed7aa;color:#7c2d12">วันหมดอายุ</th><th style="background:#fed7aa;color:#7c2d12">เหลืออายุ</th>'+
+    '<th style="background:#fecaca;color:#7f1d1d">Batch No.</th><th style="background:#fecaca;color:#7f1d1d">ลัง</th><th style="background:#fecaca;color:#7f1d1d">วันหมดอายุ</th><th style="background:#fecaca;color:#7f1d1d">เหลืออายุ</th>'+
+    '</tr></thead><tbody>'+bodyRows+'</tbody></table>'+
+    '<div style="margin-top:10px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:6px">WH10 สินค้าเฝ้าระวัง | '+dateStr+'</div>'+
+    '</body></html>';
+    const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
-    const safeDate=(curDate||watchDate||'').replace(/[\/:\*?<>|]/g,'');
-    a.download='WH10_Watch_'+safeDate+'.csv';
+    const safeDate=(dateStr||'').replace(/[\/:\*?<>|\.]/g,'');
+    a.download='WH10_Watch_'+safeDate+'.xls';
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }catch(err){alert('Export ผิดพลาด: '+err.message);}
 }
+
 
 // ── EXPORT PDF ──
 function exportWatchPDF(){
@@ -1858,12 +1906,4 @@ function testSheetsConnection(){
     <input id="gas-url-input" type="text" placeholder="https://script.google.com/macros/s/..." 
       style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:8px;">
     <div id="gas-test-result" style="display:none;margin-bottom:8px;padding:8px;border-radius:6px;font-size:13px;"></div>
-    <div class="modal-actions">
-      <button onclick="closeGasModal()" style="padding:8px 16px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer;">ยกเลิก</button>
-      <button onclick="testGasUrl()" style="padding:8px 16px;background:#3182ce;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔍 ทดสอบ</button>
-      <button onclick="saveGasUrl()" style="padding:8px 16px;background:#276749;color:#fff;border:none;border-radius:6px;cursor:pointer;">💾 บันทึก</button>
-    </div>
-  </div>
-</div>
-
-</body></html>
+    <div class="moda
