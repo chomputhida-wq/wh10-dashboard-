@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+<script>
+if(window.location.protocol==='file:'){
+  document.addEventListener('DOMContentLoaded',function(){
+    var d=document.createElement('div');
+    d.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(13,31,60,0.97);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:TH Sarabun New,sans-serif;';
+    d.innerHTML='<div style="background:#fff;border-radius:16px;padding:40px 48px;text-align:center;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">'
+      +'<div style="font-size:48px;margin-bottom:12px">🌐</div>'
+      +'<h2 style="color:#0d1f3c;font-size:22px;margin:0 0 8px">กรุณาเปิดผ่าน Link ออนไลน์</h2>'
+      +'<p style="color:#64748b;font-size:15px;margin:0 0 24px">เพื่อให้ข้อมูลอัปเดตล่าสุดและ sync กับพนักงาน</p>'
+      +'<a href="https://chomputhida-wq.github.io/wh10-dashboard-/WH10_index_fixed.html" '
+      +'style="display:inline-block;background:#f97316;color:#fff;padding:14px 32px;border-radius:8px;font-size:18px;font-weight:700;text-decoration:none">เปิด Dashboard ออนไลน์</a>'
+      +'<p style="color:#94a3b8;font-size:12px;margin:16px 0 0">chomputhida-wq.github.io/wh10-dashboard-/</p>'
+      +'</div>';
+    document.body.appendChild(d);
+  });
+}
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WH10 สินค้า 7-Eleven & Makro เฝ้าระวัง</title>
@@ -1690,6 +1707,13 @@ function fetchFromSheets(){
       }
       const rows = d.rows;
       const dateStr = d.latest_date || rows[0].date || '';
+      // Helper: convert DD.MM.YYYY or DD/MM/YYYY to comparable number YYYYMMDD
+      function _dtNum(s){ var m=(s||'').match(/(\d{2})[\.\/](\d{2})[\.\/](\d{4})/); return m?parseInt(m[3])*10000+parseInt(m[2])*100+parseInt(m[1]):0; }
+      // Don't override if we have locally-uploaded data that is newer than Sheets
+      if(curDate && _dtNum(curDate) > _dtNum(dateStr)){
+        showSheetsToast('📋 ข้อมูลในเครื่องใหม่กว่า Sheets (' + curDate + ') ไม่ทับค่ะ', 3000);
+        return;
+      }
       // Load watch rows for latest date
       const watchRows = rows.filter(function(r){ return r.type==='watch' && r.date===dateStr; })
                             .map(function(r){ return JSON.parse(r.data); });
