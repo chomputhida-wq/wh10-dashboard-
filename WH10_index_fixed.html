@@ -372,7 +372,39 @@ tr:hover td { background: #f7fafc; }
   <div class="card">
     <div class="card-header purple">📂 ประวัติการนำเข้าข้อมูล</div>
     <div class="card-body">
-      <div id="history-list"><div class="empty">ยังไม่มีประวัติค่ะ</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <select id="hist-date-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+          <option value="">📅 ทุกวันที่</option>
+        </select>
+        <select id="hist-type-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+          <option value="">📋 ทุกประเภท</option>
+          <option value="watch">เฝ้าระวัง</option>
+          <option value="old90">&gt;90วัน</option>
+        </select>
+        <input id="hist-search" type="text" placeholder="🔍 ค้นหา MAT / ชื่อสินค้า..." oninput="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;flex:1;min-width:150px">
+        <button onclick="exportHistoryExcel()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">📥 Export Excel</button>
+      </div>
+      <div id="hist-summary" style="font-size:12px;color:#64748b;margin-bottom:8px"></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#1e3a5f;color:#fff">
+              <th style="padding:8px 6px;text-align:center;white-space:nowrap">วันที่นำเข้า</th>
+              <th style="padding:8px 6px;text-align:center">ประเภท</th>
+              <th style="padding:8px 6px;text-align:left">MAT</th>
+              <th style="padding:8px 6px;text-align:left">ชื่อสินค้า</th>
+              <th style="padding:8px 6px;text-align:center">Batch</th>
+              <th style="padding:8px 6px;text-align:center">เลขที่ Batch</th>
+              <th style="padding:8px 6px;text-align:right">ลัง</th>
+              <th style="padding:8px 6px;text-align:center">หมดอายุ</th>
+              <th style="padding:8px 6px;text-align:right">รับล่าสุด</th>
+              <th style="padding:8px 6px;text-align:center">อายุ7-11</th>
+              <th style="padding:8px 6px;text-align:center">เหลือ</th>
+            </tr>
+          </thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -458,15 +490,15 @@ watchQ=''; oldQ=''; ageFilter='all'; custFilter='all';
 
 function setCustFilter(f,btn){
   custFilter=f;
-  document.querySelectorAll('#cf-all,#cf-711,#cf-mk').forEach(b=>{
+  document.querySelectorAll('#cf-all,#cf-7e,#cf-mk').forEach(b=>{
     b.classList.remove('on');
     // reset inline styles
-    if(b.id==='cf-711'){b.style.background='#f8fafc';b.style.color='#2563eb';}
+    if(b.id==='cf-7e'){b.style.background='#f8fafc';b.style.color='#2563eb';}
     else if(b.id==='cf-mk'){b.style.background='#f8fafc';b.style.color='#dc2626';}
     else{b.style.background='';b.style.color='';}
   });
   btn.classList.add('on');
-  if(btn.id==='cf-711'){btn.style.background='#2563eb';btn.style.color='#fff';}
+  if(btn.id==='cf-7e'){btn.style.background='#2563eb';btn.style.color='#fff';}
   else if(btn.id==='cf-mk'){btn.style.background='#dc2626';btn.style.color='#fff';}
   else{btn.style.background='#1e3a5f';btn.style.color='#fff';}
   // Update age711 column headers based on customer filter
@@ -586,9 +618,15 @@ function buildWatch(){
   if(ageFilter==='46') filt=filt.filter(r=>normB(r.b46).some(b=>b.lang>0));
   else if(ageFilter==='61') filt=filt.filter(r=>normB(r.b61).some(b=>b.lang>0));
   else if(ageFilter==='90') filt=filt.filter(r=>normB(r.b90).some(b=>b.lang>0));
-  // Customer filter
-  if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||'').includes('7-Eleven'));
-  else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||'').includes('Makro'));
+  // Customer filter (fallback to MASTER if r.customer is empty)
+  if(custFilter==='7-Eleven') filt=filt.filter(r=>{
+    const cust=r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'';
+    return cust.includes('7-Eleven');
+  });
+  else if(custFilter==='Makro') filt=filt.filter(r=>{
+    const cust=r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'';
+    return cust.includes('Makro');
+  });
   const m=MASTER;
   const REASONS=loadReasons();
   function bcell(b,cls){
@@ -604,9 +642,10 @@ function buildWatch(){
     const bg=i%2===0?'':'#fafafa';
     const b46s=normB(r.b46), b61s=normB(r.b61), b90s=normB(r.b90);
     const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
-    const custBadge=r.customer&&r.customer.includes('7-Eleven')
+    const _effCust=r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'';
+    const custBadge=_effCust.includes('7-Eleven')
         ?'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:700;background:#dbeafe;color:#1e40af;margin-left:4px">7-11</span>'
-        :r.customer&&r.customer.includes('Makro')
+        :_effCust.includes('Makro')
         ?'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:700;background:#fee2e2;color:#991b1b;margin-left:4px">Makro</span>'
         :'';
     const REASONS=loadReasons();
@@ -729,8 +768,8 @@ function sumBand(rows,band){
 // ── CUSTOM CUSTOMER CLASSIFICATION (localStorage) ──
 const LS_WCLS = 'wh_watch_cust_cls_v1';
 // Default classification embedded in file — employees see correct groups without needing localStorage
-const DEFAULT_CUST_CLS = {"DAJS0006506036AA":"สินค้า 7-Eleven","DABT0006506036AA":"สินค้า 7-Eleven","DSPC1004006048AA":"สินค้า 7-Eleven","300262":"สินค้า 7-Eleven","DACC0007503036AA":"สินค้า Makro","DASH0020003024AA":"สินค้า Makro","DABQ0020003024AA":"สินค้า Makro","DACK0020003024AA":"สินค้า Makro","DASG0009503036AA":"สินค้า Makro","DACC0001712144AA":"สินค้า Makro","DAJS0006506036GW":"สินค้า 7-Eleven","DBKS0003006048AA":"สินค้า 7-Eleven","DSPC4004006048AA":"สินค้า 7-Eleven","300261":"สินค้า 7-Eleven","DBSC2040000006BD":"สินค้า 7-Eleven","DATY0007506036AA":"สินค้า 7-Eleven","DASB0008503036AA":"สินค้า Makro","DASP0001812144AA":"สินค้า Makro","DBHM0002806048AA":"สินค้า 7-Eleven","DBSA0002806048BN":"สินค้า Makro","DBAF0002706048AA":"สินค้า 7-Eleven","DBMN1008506024AA":"สินค้า 7-Eleven","DSPC2004006048AA":"สินค้า 7-Eleven","DBWY0003006048BN":"สินค้า Makro","DNSI0003206048AA":"สินค้า 7-Eleven","DNAE0003506048AA":"สินค้า 7-Eleven","DACC1050000012AA":"สินค้า 7-Eleven","DQCO1002212072AA":"สินค้า 7-Eleven"};
-function loadWatchCustCls(){ if(window._WSAVE&&window._WSAVE.cls) return window._WSAVE.cls; try{ var saved=JSON.parse(localStorage.getItem(LS_WCLS)||'{}'); return Object.assign({}, DEFAULT_CUST_CLS, saved); }catch(e){ return Object.assign({}, DEFAULT_CUST_CLS); } }
+const DEFAULT_CUST_CLS = {"DAJS0006506036AA":"สินค้า 7-Eleven","DABT0006506036AA":"สินค้า 7-Eleven","DSPC1004006048AA":"สินค้า 7-Eleven","300262":"สินค้า 7-Eleven","DACC0007503036AA":"สินค้า Makro","DASH0020003024AA":"สินค้า Makro","DABQ0020003024AA":"สินค้า Makro","DACK0020003024AA":"สินค้า Makro","DASG0009503036AA":"สินค้า Makro","DACC0001712144AA":"สินค้า Makro","DAJS0006506036GW":"สินค้า 7-Eleven","DBKS0003006048AA":"สินค้า 7-Eleven","DSPC4004006048AA":"สินค้า 7-Eleven","300261":"สินค้า 7-Eleven","DBSC2040000006BD":"สินค้า 7-Eleven","DATY0007506036AA":"สินค้า 7-Eleven","DASB0008503036AA":"สินค้า Makro","DASP0001812144AA":"สินค้า Makro","DBHM0002806048AA":"สินค้า 7-Eleven","DBSA0002806048BN":"สินค้า Makro","DBAF0002706048AA":"สินค้า 7-Eleven","DBMN1008506024AA":"สินค้า 7-Eleven","DSPC2004006048AA":"สินค้า 7-Eleven","DBWY0003006048BN":"สินค้า Makro","DNSI0003206048AA":"สินค้า 7-Eleven","DNAE0003506048AA":"สินค้า 7-Eleven","DACC1050000012AA":"สินค้า 7-Eleven","DQCO1002212072AA":"สินค้า 7-Eleven","DBWL0015006024AA":"สินค้า 7-Eleven","DBHM0015006024AA":"สินค้า 7-Eleven"};
+function loadWatchCustCls(){ if(window._WSAVE&&window._WSAVE.cls) return window._WSAVE.cls; try{ var saved=JSON.parse(localStorage.getItem(LS_WCLS)||'{}'); return Object.assign({}, saved, DEFAULT_CUST_CLS); }catch(e){ return Object.assign({}, DEFAULT_CUST_CLS); } }
 function saveWatchCustCls(obj){ localStorage.setItem(LS_WCLS, JSON.stringify(obj)); }
 
 function applyWatchCustCls(){
@@ -1882,6 +1921,15 @@ function testSheetsConnection(){
       localStorage.setItem(gasKey, 'https://script.google.com/macros/s/AKfycbyvmBJrM8103MLuxZNYd2_hlXjsk_qEufh5GgD0J7u1xL-76k0rh_dH-X4AgfDyiXwT/exec');
     }
   }catch(e){}
+  // Auto-populate history from embedded WATCH_ALL if history is empty
+  try{
+    var _hist = loadHistory();
+    if(!_hist.length && typeof WATCH_ALL !== 'undefined' && typeof saveHistory === 'function'){
+      ALL_DATES.forEach(function(d){
+        if(WATCH_ALL[d] && WATCH_ALL[d].length) saveHistory(d, WATCH_ALL[d], []);
+      });
+    }
+  }catch(e2){ console.warn('auto-history error:',e2); }
   try{ applyWatchCustCls(); }catch(e3){ console.warn('applyWatchCustCls error:',e3); }
   try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
   try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
