@@ -2606,4 +2606,6 @@ function testSheetsConnection(){
   try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
   try{ rebuildWatchAllFromHistory(); }catch(e4b){ console.warn('rebuildWatchAllFromHistory error:',e4b); }
   try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
-  // Auto-fetch latest dat
+  try{ testSheetsConnection(); }catch(e6){ console.warn('testSheetsConnection error:',e6); }
+  try{ startAutoRefresh(); }catch(e7){ console.warn('startAutoRefresh error:',e7); }
+})();
