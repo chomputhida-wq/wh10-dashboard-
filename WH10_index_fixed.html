@@ -1200,7 +1200,6 @@ function buildWatch(){
   // Use WATCH_LIVE if curDate matches, otherwise fall back to WATCH_ALL
   const rows=(curDate===watchDate&&WATCH_LIVE.length)?WATCH_LIVE:(WATCH_ALL[curDate]||[]);
   const q=watchQ.toLowerCase();
-  const body=document.getElementById('watch-body');
   let filt=q?rows.filter(r=>r.mat.toLowerCase().includes(q)||r.desc.toLowerCase().includes(q)):rows;
   // Apply age range filter
   if(ageFilter==='46') filt=filt.filter(r=>normB(r.b46).some(b=>b.lang>0));
@@ -1225,8 +1224,9 @@ function buildWatch(){
            <td class="${cls} ctr">${b.age711!==null&&b.age711!==undefined?b.age711:'–'}</td>
            <td class="${cls} ctr">${(()=>{const v=b.เหลือ!==null&&b.เหลือ!==undefined?b.เหลือ:(b.remain!==null&&b.remain!==undefined?b.remain:null);if(v===null)return'–';const c=v<0?'#dc2626':v<10?'#d97706':'#16a34a';return`<span style="color:${c};font-weight:700">${v}</span>`;})()}</td>`;
   }
-  if(!filt.length){body.innerHTML='<tr><td colspan="17" class="empty">ไม่พบสินค้าในช่วงอายุที่เลือก</td></tr>';}
-  else body.innerHTML=filt.map(function(r,i){
+  var _watchHTML;
+  if(!filt.length){ _watchHTML='<tr><td colspan="17" class="empty">ไม่พบสินค้าในช่วงอายุที่เลือก</td></tr>'; }
+  else _watchHTML=filt.map(function(r,i){
     const bg=i%2===0?'':'#fafafa';
     const b46s=normB(r.b46), b61s=normB(r.b61), b90s=normB(r.b90);
     const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
@@ -1256,26 +1256,31 @@ function buildWatch(){
     </tr>`;
     }).join('');
   }).join('');
-    // Update KPIs
-  document.getElementById('kpi-sku').textContent=filt.length;
-  document.getElementById('kpi-46').textContent=numF(sumBand(filt,'b46'));
-  document.getElementById('kpi-61').textContent=numF(sumBand(filt,'b61'));
-  document.getElementById('kpi-90').textContent=numF(sumBand(filt,'b90'));
-  document.getElementById('cur-date').textContent=curDate;
-  const wb=document.getElementById('watch-date-badge'); if(wb) wb.textContent=curDate;
-  const wc=document.getElementById('watch-count'); if(wc) wc.textContent=filt.length+' รายการ';
-  // Update age filter badges
-  const c46=document.getElementById('cnt-46'); if(c46) c46.textContent=rows.filter(r=>normB(r.b46).some(b=>b.lang>0)).length;
-  const c61=document.getElementById('cnt-61'); if(c61) c61.textContent=rows.filter(r=>normB(r.b61).some(b=>b.lang>0)).length;
-  const c90=document.getElementById('cnt-90'); if(c90) c90.textContent=rows.filter(r=>normB(r.b90).some(b=>b.lang>0)).length;
+  // Update ALL watch-body elements (mobile + desktop)
+  document.querySelectorAll('#watch-body').forEach(function(body){ body.innerHTML=_watchHTML; });
+  // Update KPIs (all instances)
+  function _setAll(id,val){ document.querySelectorAll('#'+id).forEach(function(el){ el.textContent=val; }); }
+  _setAll('kpi-sku', filt.length);
+  _setAll('kpi-46', numF(sumBand(filt,'b46')));
+  _setAll('kpi-61', numF(sumBand(filt,'b61')));
+  _setAll('kpi-90', numF(sumBand(filt,'b90')));
+  _setAll('cur-date', curDate);
+  _setAll('watch-date-badge', curDate);
+  _setAll('watch-count', filt.length+' รายการ');
+  var n46=rows.filter(r=>normB(r.b46).some(b=>b.lang>0)).length;
+  var n61=rows.filter(r=>normB(r.b61).some(b=>b.lang>0)).length;
+  var n90=rows.filter(r=>normB(r.b90).some(b=>b.lang>0)).length;
+  _setAll('cnt-46', n46);
+  _setAll('cnt-61', n61);
+  _setAll('cnt-90', n90);
 }
 
 function buildOld(){
   const q=oldQ.toLowerCase();
   const filt=q?OLD90.filter(r=>r.mat.toLowerCase().includes(q)||r.desc.toLowerCase().includes(q)||r.grp.toLowerCase().includes(q)):OLD90;
-  const body=document.getElementById('old-body');
-  if(!filt.length){body.innerHTML='<tr><td colspan="12" class="empty">ไม่พบข้อมูล</td></tr>';return;}
-  body.innerHTML=filt.map(function(r,i){
+  var _oldHTML;
+  if(!filt.length){ _oldHTML='<tr><td colspan="12" class="empty">ไม่พบข้อมูล</td></tr>'; document.querySelectorAll('#old-body').forEach(function(b){ b.innerHTML=_oldHTML; }); return; }
+  _oldHTML=filt.map(function(r,i){
     const bg=i%2===0?'':'#fafafa';
     const d=parseFloat(r.remain_day||0);
     const dcls=d<7?'pct-high':d<30?'pct-med':'pct-ok';
@@ -1298,6 +1303,7 @@ function buildOld(){
       <td class="ctr ${pscls}">${r.pct_sl||'–'}</td>
     </tr>`;
   }).join('');
+  document.querySelectorAll('#old-body').forEach(function(b){ b.innerHTML=_oldHTML; });
 }
 
 function switchDate(d){curDate=d;buildWatch();}
