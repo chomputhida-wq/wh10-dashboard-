@@ -373,10 +373,10 @@ tr:hover td { background: #f7fafc; }
     <div class="card-header purple">📂 ประวัติการนำเข้าข้อมูล</div>
     <div class="card-body">
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-        <select id="hist-date-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <select id="hist-date-sel" onchange="histSetDate(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
           <option value="">📅 ทุกวันที่</option>
         </select>
-        <select id="hist-type-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <select id="hist-type-sel" onchange="histSetType(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
           <option value="">📋 ทุกประเภท</option>
           <option value="46-60">🟡 46-60 วัน</option>
           <option value="61-90">🟠 61-90 วัน</option>
@@ -959,10 +959,10 @@ tr:hover td { background: #f7fafc; }
     <div class="card-header purple">📂 ประวัติการนำเข้าข้อมูล</div>
     <div class="card-body">
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-        <select id="hist-date-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <select id="hist-date-sel" onchange="histSetDate(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
           <option value="">📅 ทุกวันที่</option>
         </select>
-        <select id="hist-type-sel" onchange="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+        <select id="hist-type-sel" onchange="histSetType(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
           <option value="">📋 ทุกประเภท</option>
           <option value="46-60">🟡 46-60 วัน</option>
           <option value="61-90">🟠 61-90 วัน</option>
@@ -2164,55 +2164,58 @@ function saveHistory(importDate, watchData, old90Data){
   try{ localStorage.setItem(HIST_KEY, JSON.stringify(hist)); }catch(e){}
 }
 
+var _histDateVal = null; // null = not yet initialized
+var _histTypeVal = '';
+function histSetDate(v){ _histDateVal = v; buildHistory(); }
+function histSetType(v){ _histTypeVal = v; buildHistory(); }
 function buildHistory(){
   const hist = loadHistory();
-  const dateSel = document.getElementById('hist-date-sel');
-  const typeSel = document.getElementById('hist-type-sel');
-  const search = (document.getElementById('hist-search')||{}).value||'';
+  // Get search from whichever search box is visible
+  const searchEl = document.querySelector('#hist-search');
+  const search = searchEl ? searchEl.value : '';
   // Populate date dropdown (sort DD.MM.YYYY newest first)
   function toISO(d){ var p=d.split('.'); return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:d; }
   const dates = [...new Set(hist.map(r=>r.importDate))].sort(function(a,b){ return toISO(b).localeCompare(toISO(a)); });
-  // Auto-select latest date only on first render; respect user's selection after that
-  const firstRender = dateSel && !dateSel.dataset.initialized;
-  const curDateVal = firstRender ? (dates.length ? dates[0] : '') : (dateSel ? dateSel.value : '');
-  if(dateSel){
-    dateSel.dataset.initialized = '1';
+  // Auto-select latest date only on first render
+  if(_histDateVal === null) _histDateVal = dates.length ? dates[0] : '';
+  const curDateVal = _histDateVal;
+  // Update ALL date dropdowns
+  document.querySelectorAll('#hist-date-sel').forEach(function(dateSel){
     dateSel.innerHTML = '<option value="">📅 ทุกวันที่</option>';
-    dates.forEach(d=>{
+    dates.forEach(function(d){
       const o = document.createElement('option');
       o.value = d; o.textContent = d.replace(/\./g,'/');
       if(d===curDateVal) o.selected=true;
       dateSel.appendChild(o);
     });
-  }
+  });
+  // Update ALL type dropdowns
+  document.querySelectorAll('#hist-type-sel').forEach(function(typeSel){
+    Array.from(typeSel.options).forEach(function(o){ o.selected = o.value===_histTypeVal; });
+  });
   // Filter
   let rows = hist;
-  if(dateSel && dateSel.value) rows = rows.filter(r=>r.importDate===dateSel.value);
-  if(typeSel && typeSel.value) rows = rows.filter(r=>r.batchBand===typeSel.value);
+  if(curDateVal) rows = rows.filter(r=>r.importDate===curDateVal);
+  if(_histTypeVal) rows = rows.filter(r=>r.batchBand===_histTypeVal);
   if(search){
     const q=search.toLowerCase();
     rows = rows.filter(r=>r.mat.toLowerCase().includes(q)||r.desc.toLowerCase().includes(q)||(r.batch||'').toLowerCase().includes(q));
   }
   // Sort by importDate descending (newest first), then MAT
   rows.sort(function(a,b){
-    function toISO(d){ var p=d.split('.'); return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:d; }
-    var cmp = toISO(b.importDate).localeCompare(toISO(a.importDate));
+    function toISO2(d){ var p=d.split('.'); return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:d; }
+    var cmp = toISO2(b.importDate).localeCompare(toISO2(a.importDate));
     return cmp !== 0 ? cmp : a.mat.localeCompare(b.mat);
   });
-  // Summary
-  const sumEl = document.getElementById('hist-summary');
-  if(sumEl){
-    const totalImports = [...new Set(hist.map(r=>r.importDate))].length;
-    sumEl.textContent = 'รวมทั้งหมด '+hist.length+' รายการ | '+totalImports+' วันที่ | แสดง '+rows.length+' รายการ';
-  }
-  // Render
-  const body = document.getElementById('hist-body');
-  if(!body) return;
+  // Build HTML once, then insert into ALL hist-body elements
+  const totalImports = [...new Set(hist.map(r=>r.importDate))].length;
+  const summaryText = 'รวมทั้งหมด '+hist.length+' รายการ | '+totalImports+' วันที่ | แสดง '+rows.length+' รายการ';
+  document.querySelectorAll('#hist-summary').forEach(function(el){ el.textContent = summaryText; });
+  let bodyHTML;
   if(!rows.length){
-    body.innerHTML='<tr><td colspan="11" class="empty" style="padding:30px;text-align:center;color:#94a3b8">ยังไม่มีประวัติ — นำเข้าไฟล์ XLS เพื่อเริ่มบันทึก</td></tr>';
-    return;
-  }
-  body.innerHTML = rows.map(function(r,i){
+    bodyHTML = '<tr><td colspan="11" class="empty" style="padding:30px;text-align:center;color:#94a3b8">ยังไม่มีประวัติ — นำเข้าไฟล์ XLS เพื่อเริ่มบันทึก</td></tr>';
+  } else {
+  bodyHTML = rows.map(function(r,i){
     const bg = i%2===0?'':'#fafafa';
     const เหลือVal = r.เหลือ!==''&&r.เหลือ!==null?Number(r.เหลือ):null;
     const เหลือColor = เหลือVal===null?'#94a3b8':เหลือVal<0?'#dc2626':เหลือVal<10?'#d97706':'#16a34a';
@@ -2234,18 +2237,20 @@ function buildHistory(){
       +'<td class="ctr" style="background:#fef9c3;font-weight:800;color:'+เหลือColor+'">'+(เหลือVal!==null?เหลือVal:'–')+'</td>'
       +'</tr>';
   }).join('');
+  }
+  document.querySelectorAll('#hist-body').forEach(function(body){ body.innerHTML = bodyHTML; });
 }
 
 function exportHistoryExcel(){
   const hist = loadHistory();
   if(!hist.length){ alert('ยังไม่มีประวัติค่ะ'); return; }
   // Filter same as current view
-  const dateSel = document.getElementById('hist-date-sel');
-  const typeSel = document.getElementById('hist-type-sel');
+  const _hd = _histDateVal||'';
+  // type filter via global
   const search = (document.getElementById('hist-search')||{}).value||'';
   let rows = hist;
-  if(dateSel && dateSel.value) rows = rows.filter(r=>r.importDate===dateSel.value);
-  if(typeSel && typeSel.value) rows = rows.filter(r=>r.type===typeSel.value);
+  if(_hd) rows = rows.filter(r=>r.importDate===_hd);
+  if(_histTypeVal) rows = rows.filter(r=>r.batchBand===_histTypeVal);
   const bandSelE = document.getElementById('hist-band-sel');
   if(bandSelE && bandSelE.value) rows = rows.filter(r=>r.batchBand===bandSelE.value);
   if(search){
@@ -2601,24 +2606,4 @@ function testSheetsConnection(){
   try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
   try{ rebuildWatchAllFromHistory(); }catch(e4b){ console.warn('rebuildWatchAllFromHistory error:',e4b); }
   try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
-  // Auto-fetch latest data from GAS on page load
-  try{ if(getGasUrl()) setTimeout(fetchFromSheets, 1000); }catch(e6){}
-  var banner = document.getElementById('conn-banner');
-  if(banner && (function(){ try{ return localStorage.getItem('wh10_gas_url'); }catch(e){ return ''; } })()){
-    banner.className = 'ok';
-    banner.textContent = '✅ เชื่อมต่อ Google Sheets แล้ว';
-  }
-  startAutoRefresh();
-  setTimeout(testSheetsConnection, 1200);
-})();
-</script>
-
-<!-- Gas Settings Modal -->
-<div class="modal-overlay" id="gas-modal">
-  <div class="modal-box">
-    <h3 style="margin:0 0 12px;font-size:16px;">⚙️ ตั้งค่า Google Sheets</h3>
-    <p style="margin:0 0 8px;font-size:13px;color:#555;">วาง URL ของ Google Apps Script Web App:</p>
-    <input id="gas-url-input" type="text" placeholder="https://script.google.com/macros/s/..." 
-      style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:8px;">
-    <div id="gas-test-result" style="display:none;margin-bottom:8px;padding:8px;border-radius:6px;font-size:13px;"></div>
-    <div class="moda
+  // Auto-fetch latest dat
