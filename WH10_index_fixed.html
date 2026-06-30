@@ -1934,12 +1934,14 @@ function exportWatchPDF(){
       const custLabel=r.customer&&r.customer.includes('7-Eleven')?'7-11':r.customer&&r.customer.includes('Makro')?'Makro':'';
       const reason=REASONS[r.mat]||'';
       function bcells(b,color){
-        if(!b||(!b.batch&&!b.lang)) return '<td colspan="4" style="text-align:center;color:#d1d5db;border:1px solid #e5e7eb">–</td>';
-        const remStyle=b.remain!==null&&b.remain<7?'color:#dc2626;font-weight:700':b.remain!==null&&b.remain<14?'color:#d97706;font-weight:600':'color:#065f46';
+        if(!b||(!b.batch&&!b.lang)) return '<td colspan="5" style="text-align:center;color:#d1d5db;border:1px solid #e5e7eb">–</td>';
+        const เหลือ=b.เหลือ!==null&&b.เหลือ!==undefined?b.เหลือ:(b.remain!==null&&b.remain!==undefined?b.remain:null);
+        const เหลือStyle=เหลือ!==null&&เหลือ<0?'color:#dc2626;font-weight:800':เหลือ!==null&&เหลือ<7?'color:#d97706;font-weight:700':'color:#065f46;font-weight:700';
         return`<td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:10px;color:#374151">${b.batch||'–'}</td>
                <td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;font-weight:700;color:${color}">${b.lang!=null?b.lang.toLocaleString():'–'}</td>
                <td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:10px">${b.exp||'–'}</td>
-               <td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:center;${remStyle}">${b.remain!=null?b.remain+' วัน':'–'}</td>`;
+               <td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:center">${b.age711!=null?b.age711:'–'}</td>
+               <td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:center;${เหลือStyle}">${เหลือ!==null?เหลือ:'–'}</td>`;
       }
       const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
       const maxR=Math.max(1,show46?b46s.length:0,show61?b61s.length:0,show90?b90s.length:0);
@@ -2040,15 +2042,15 @@ function exportWatchPDF(){
     <tr>
       <th class="th-mat" rowspan="2" style="width:120px">Material</th>
       <th class="th-desc" rowspan="2" style="width:170px">ชื่อสินค้า</th>
-      ${show46?'<th class="th-46" colspan="4">🟡 Batch 46-60 วัน</th>':''}
-      ${show61?'<th class="th-61" colspan="4">🟠 Batch 61-90 วัน</th>':''}
-      ${show90?'<th class="th-90" colspan="4">🔴 Batch &gt;90 วัน</th>':''}
+      ${show46?'<th class="th-46" colspan="5">🟡 Batch 46-60 วัน</th>':''}
+      ${show61?'<th class="th-61" colspan="5">🟠 Batch 61-90 วัน</th>':''}
+      ${show90?'<th class="th-90" colspan="5">🔴 Batch &gt;90 วัน</th>':''}
       <th class="th-reason" rowspan="2" style="width:110px">✏️ หมายเหตุ</th>
     </tr>
     <tr>
-      ${show46?'<th class="th-46">Batch No.</th><th class="th-46">ลัง</th><th class="th-46">วันหมดอายุ</th><th class="th-46">เหลืออายุ</th>':''}
-      ${show61?'<th class="th-61">Batch No.</th><th class="th-61">ลัง</th><th class="th-61">วันหมดอายุ</th><th class="th-61">เหลืออายุ</th>':''}
-      ${show90?'<th class="th-90">Batch No.</th><th class="th-90">ลัง</th><th class="th-90">วันหมดอายุ</th><th class="th-90">เหลืออายุ</th>':''}
+      ${show46?'<th class="th-46">Batch No.</th><th class="th-46">ลัง</th><th class="th-46">วันหมดอายุ</th><th class="th-46">อายุส่ง7-11/วัน</th><th class="th-46">เหลืออายุ/วัน</th>':''}
+      ${show61?'<th class="th-61">Batch No.</th><th class="th-61">ลัง</th><th class="th-61">วันหมดอายุ</th><th class="th-61">อายุส่ง7-11/วัน</th><th class="th-61">เหลืออายุ/วัน</th>':''}
+      ${show90?'<th class="th-90">Batch No.</th><th class="th-90">ลัง</th><th class="th-90">วันหมดอายุ</th><th class="th-90">อายุส่ง7-11/วัน</th><th class="th-90">เหลืออายุ/วัน</th>':''}
     </tr>
   </thead>
   <tbody>${bandRows(filt)}</tbody>
@@ -2057,13 +2059,13 @@ function exportWatchPDF(){
       <td colspan="2" style="border:1px solid #e5e7eb;padding:5px 6px">รวม ${filt.length} รายการ</td>
       ${show46?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#854d0e">${totalLang46.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      <td style="border:1px solid #e5e7eb" colspan="3"></td>`:''}
       ${show61?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#9a3412">${totalLang61.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      <td style="border:1px solid #e5e7eb" colspan="3"></td>`:''}
       ${show90?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#991b1b">${totalLang90.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      <td style="border:1px solid #e5e7eb" colspan="3"></td>`:''}
       <td style="border:1px solid #e5e7eb"></td>
     </tr>
   </tfoot>
