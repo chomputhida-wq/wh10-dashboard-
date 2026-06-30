@@ -2587,14 +2587,12 @@ function testSheetsConnection(){
       localStorage.setItem(gasKey, 'https://script.google.com/macros/s/AKfycbyvmBJrM8103MLuxZNYd2_hlXjsk_qEufh5GgD0J7u1xL-76k0rh_dH-X4AgfDyiXwT/exec');
     }
   }catch(e){}
-  // Auto-populate history from embedded WATCH_ALL (always sync embedded dates)
+  // Auto-populate history from embedded WATCH_ALL (sync every load)
   try{
-    var _waKey = 'wh10_watchall_synced_v2';
-    if(!localStorage.getItem(_waKey) && typeof WATCH_ALL !== 'undefined' && typeof saveHistory === 'function'){
+    if(typeof WATCH_ALL !== 'undefined' && typeof saveHistory === 'function'){
       ALL_DATES.forEach(function(d){
         if(WATCH_ALL[d] && WATCH_ALL[d].length) saveHistory(d, WATCH_ALL[d], []);
       });
-      localStorage.setItem(_waKey, '1');
     }
   }catch(e2){ console.warn('auto-history error:',e2); }
   try{ applyWatchCustCls(); }catch(e3){ console.warn('applyWatchCustCls error:',e3); }
