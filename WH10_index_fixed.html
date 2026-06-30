@@ -2504,6 +2504,8 @@ function fetchFromSheets(){
         saveOld90();
         if(typeof buildOld90==='function') buildOld90();
       }
+      saveHistory(dateStr, watchRows, old90Rows);
+      buildHistory();
       showSheetsToast('✅ อัพเดทแล้ว: ' + dateStr + ' | ' + watchRows.length + ' รายการ', 4000);
       try{ rebuildWatchAllFromHistory(); }catch(e){}
     })
@@ -2585,12 +2587,13 @@ function testSheetsConnection(){
       localStorage.setItem(gasKey, 'https://script.google.com/macros/s/AKfycbyvmBJrM8103MLuxZNYd2_hlXjsk_qEufh5GgD0J7u1xL-76k0rh_dH-X4AgfDyiXwT/exec');
     }
   }catch(e){}
-  // Auto-populate history from embedded WATCH_ALL if history is empty
+  // Auto-populate history from embedded WATCH_ALL (add any missing dates)
   try{
     var _hist = loadHistory();
-    if(!_hist.length && typeof WATCH_ALL !== 'undefined' && typeof saveHistory === 'function'){
+    var _histDates = new Set(_hist.map(function(r){ return r.importDate; }));
+    if(typeof WATCH_ALL !== 'undefined' && typeof saveHistory === 'function'){
       ALL_DATES.forEach(function(d){
-        if(WATCH_ALL[d] && WATCH_ALL[d].length) saveHistory(d, WATCH_ALL[d], []);
+        if(!_histDates.has(d) && WATCH_ALL[d] && WATCH_ALL[d].length) saveHistory(d, WATCH_ALL[d], []);
       });
     }
   }catch(e2){ console.warn('auto-history error:',e2); }
