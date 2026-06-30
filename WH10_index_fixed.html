@@ -1924,6 +1924,9 @@ function exportWatchPDF(){
     custFilter!=='all'?({'7-Eleven':'🏪 7-Eleven','Makro':'🏬 Makro'}[custFilter]||''):'',
   ].filter(Boolean).join(' · ')||'ทั้งหมด';
 
+  const show46=ageFilter==='46'||ageFilter==='all';
+  const show61=ageFilter==='61'||ageFilter==='all';
+  const show90=ageFilter==='90'||ageFilter==='all';
   function bandRows(items){
     var out=[];
     items.forEach(function(r,i){
@@ -1939,7 +1942,7 @@ function exportWatchPDF(){
                <td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:center;${remStyle}">${b.remain!=null?b.remain+' วัน':'–'}</td>`;
       }
       const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
-      const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
+      const maxR=Math.max(1,show46?b46s.length:0,show61?b61s.length:0,show90?b90s.length:0);
       for(let ri=0;ri<maxR;ri++){
         const isF=ri===0;
         const b46=b46s[ri]||null,b61=b61s[ri]||null,b90=b90s[ri]||null;
@@ -1947,10 +1950,10 @@ function exportWatchPDF(){
         out.push('<tr style="background:'+rowBg+(isF?'':';border-top:1px dashed #d1d5db')+'">'
           +(isF?'<td style="border:1px solid #e5e7eb;padding:4px 6px;font-family:monospace;font-size:9px;color:#6b7280" rowspan="'+maxR+'">'+r.mat+'</td>':'')
           +(isF?('<td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:10px;font-weight:600;color:#1e293b" rowspan="'+maxR+'">'+r.desc+(custLabel?'<span style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:6px;font-size:8px;font-weight:700;background:'+(custLabel==='7-11'?'#dbeafe;color:#1e40af':'#fee2e2;color:#991b1b')+'">'+custLabel+'</span>':'')+'</td>'):'')
-          +bcells(b46,'#854d0e')
-          +bcells(b61,'#9a3412')
-          +bcells(b90,'#991b1b')
-          +(isF?'<td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:10px;color:#374151;max-width:120px" rowspan="'+maxR+'">'+reason+'</td>':'')
+          +(show46?bcells(b46,'#854d0e'):'')
+          +(show61?bcells(b61,'#9a3412'):'')
+          +(show90?bcells(b90,'#991b1b'):'')
+          +(isF?'<td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:10px;color:#374151;max-width:120px" contenteditable="true" rowspan="'+maxR+'">'+reason+'</td>':'')
           +'</tr>'
         );
       }
@@ -1986,9 +1989,12 @@ function exportWatchPDF(){
   .th-90{background:#ef4444;color:#fff}
   .th-reason{background:#7c3aed;color:#fff}
   .footer{margin-top:12px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px}
+  [contenteditable]{outline:none;cursor:text;min-height:18px}
+  [contenteditable]:hover{background:#fffbeb}
   @media print{
     button{display:none!important}
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    [contenteditable]{background:transparent!important;cursor:default}
   }
 </style>
 </head><body>
@@ -2011,18 +2017,18 @@ function exportWatchPDF(){
 </div>
 
 <div class="summary-row">
-  <div class="sum-card" style="background:#fef9c3;border-color:#eab308">
+  ${show46?`<div class="sum-card" style="background:#fef9c3;border-color:#eab308">
     <div class="lbl" style="color:#713f12">🟡 Batch 46-60 วัน</div>
     <div class="val" style="color:#854d0e">${totalLang46.toLocaleString()} ลัง</div>
-  </div>
-  <div class="sum-card" style="background:#ffedd5;border-color:#f97316">
+  </div>`:''}
+  ${show61?`<div class="sum-card" style="background:#ffedd5;border-color:#f97316">
     <div class="lbl" style="color:#7c2d12">🟠 Batch 61-90 วัน</div>
     <div class="val" style="color:#9a3412">${totalLang61.toLocaleString()} ลัง</div>
-  </div>
-  <div class="sum-card" style="background:#fee2e2;border-color:#ef4444">
+  </div>`:''}
+  ${show90?`<div class="sum-card" style="background:#fee2e2;border-color:#ef4444">
     <div class="lbl" style="color:#7f1d1d">🔴 Batch &gt;90 วัน</div>
     <div class="val" style="color:#991b1b">${totalLang90.toLocaleString()} ลัง</div>
-  </div>
+  </div>`:''}
   <div class="sum-card" style="background:#f1f5f9;border-color:#94a3b8">
     <div class="lbl" style="color:#475569">📦 รวมทั้งหมด</div>
     <div class="val" style="color:#1e3a5f">${(totalLang46+totalLang61+totalLang90).toLocaleString()} ลัง</div>
@@ -2034,30 +2040,31 @@ function exportWatchPDF(){
     <tr>
       <th class="th-mat" rowspan="2" style="width:120px">Material</th>
       <th class="th-desc" rowspan="2" style="width:170px">ชื่อสินค้า</th>
-      <th class="th-46" colspan="4">🟡 Batch 46-60 วัน</th>
-      <th class="th-61" colspan="4">🟠 Batch 61-90 วัน</th>
-      <th class="th-90" colspan="4">🔴 Batch &gt;90 วัน</th>
+      ${show46?'<th class="th-46" colspan="4">🟡 Batch 46-60 วัน</th>':''}
+      ${show61?'<th class="th-61" colspan="4">🟠 Batch 61-90 วัน</th>':''}
+      ${show90?'<th class="th-90" colspan="4">🔴 Batch &gt;90 วัน</th>':''}
       <th class="th-reason" rowspan="2" style="width:110px">✏️ หมายเหตุ</th>
     </tr>
     <tr>
-      <th class="th-46">Batch No.</th><th class="th-46">ลัง</th><th class="th-46">วันหมดอายุ</th><th class="th-46">เหลืออายุ</th>
-      <th class="th-61">Batch No.</th><th class="th-61">ลัง</th><th class="th-61">วันหมดอายุ</th><th class="th-61">เหลืออายุ</th>
-      <th class="th-90">Batch No.</th><th class="th-90">ลัง</th><th class="th-90">วันหมดอายุ</th><th class="th-90">เหลืออายุ</th>
+      ${show46?'<th class="th-46">Batch No.</th><th class="th-46">ลัง</th><th class="th-46">วันหมดอายุ</th><th class="th-46">เหลืออายุ</th>':''}
+      ${show61?'<th class="th-61">Batch No.</th><th class="th-61">ลัง</th><th class="th-61">วันหมดอายุ</th><th class="th-61">เหลืออายุ</th>':''}
+      ${show90?'<th class="th-90">Batch No.</th><th class="th-90">ลัง</th><th class="th-90">วันหมดอายุ</th><th class="th-90">เหลืออายุ</th>':''}
     </tr>
   </thead>
   <tbody>${bandRows(filt)}</tbody>
   <tfoot>
     <tr style="background:#f1f5f9;font-weight:700">
       <td colspan="2" style="border:1px solid #e5e7eb;padding:5px 6px">รวม ${filt.length} รายการ</td>
-      <td style="border:1px solid #e5e7eb" colspan="1"></td>
+      ${show46?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#854d0e">${totalLang46.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>
-      <td style="border:1px solid #e5e7eb" colspan="1"></td>
+      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      ${show61?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#9a3412">${totalLang61.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>
-      <td style="border:1px solid #e5e7eb" colspan="1"></td>
+      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      ${show90?`<td style="border:1px solid #e5e7eb"></td>
       <td style="border:1px solid #e5e7eb;padding:5px 6px;text-align:right;color:#991b1b">${totalLang90.toLocaleString()}</td>
-      <td style="border:1px solid #e5e7eb" colspan="2"></td>
+      <td style="border:1px solid #e5e7eb" colspan="2"></td>`:''}
+      <td style="border:1px solid #e5e7eb"></td>
     </tr>
   </tfoot>
 </table>
