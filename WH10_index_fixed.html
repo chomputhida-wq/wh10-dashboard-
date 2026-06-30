@@ -1993,10 +1993,12 @@ function exportWatchPDF(){
   .footer{margin-top:12px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px}
   [contenteditable]{outline:none;cursor:text;min-height:18px}
   [contenteditable]:hover{background:#fffbeb}
+  [contenteditable]:empty:before{content:'พิมพ์หมายเหตุ...';color:#94a3b8;font-style:italic}
   @media print{
     button{display:none!important}
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     [contenteditable]{background:transparent!important;cursor:default}
+    [contenteditable]:empty:before{content:''}
   }
 </style>
 </head><body>
