@@ -2166,6 +2166,8 @@ function saveHistory(importDate, watchData, old90Data){
 
 function buildHistory(){
   const hist = loadHistory();
+  // DEBUG - remove after fix
+  if(!window._histDebugDone){ window._histDebugDone=true; var bb={}; hist.forEach(function(r){ bb[r.batchBand]=(bb[r.batchBand]||0)+1; }); alert('History batchBand counts:\n'+JSON.stringify(bb)+'\nTotal: '+hist.length); }
   const dateSel = document.getElementById('hist-date-sel');
   const typeSel = document.getElementById('hist-type-sel');
   const search = (document.getElementById('hist-search')||{}).value||'';
