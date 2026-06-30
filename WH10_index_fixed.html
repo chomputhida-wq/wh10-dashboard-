@@ -2166,17 +2166,17 @@ function saveHistory(importDate, watchData, old90Data){
 
 function buildHistory(){
   const hist = loadHistory();
-  // DEBUG - remove after fix
-  if(!window._histDebugDone){ window._histDebugDone=true; var bb={}; hist.forEach(function(r){ bb[r.batchBand]=(bb[r.batchBand]||0)+1; }); alert('History batchBand counts:\n'+JSON.stringify(bb)+'\nTotal: '+hist.length); }
   const dateSel = document.getElementById('hist-date-sel');
   const typeSel = document.getElementById('hist-type-sel');
   const search = (document.getElementById('hist-search')||{}).value||'';
   // Populate date dropdown (sort DD.MM.YYYY newest first)
   function toISO(d){ var p=d.split('.'); return p.length===3?p[2]+'-'+p[1]+'-'+p[0]:d; }
   const dates = [...new Set(hist.map(r=>r.importDate))].sort(function(a,b){ return toISO(b).localeCompare(toISO(a)); });
-  // Auto-select latest date if nothing is selected yet
-  const curDateVal = (dateSel && dateSel.value) ? dateSel.value : (dates.length ? dates[0] : '');
+  // Auto-select latest date only on first render; respect user's selection after that
+  const firstRender = dateSel && !dateSel.dataset.initialized;
+  const curDateVal = firstRender ? (dates.length ? dates[0] : '') : (dateSel ? dateSel.value : '');
   if(dateSel){
+    dateSel.dataset.initialized = '1';
     dateSel.innerHTML = '<option value="">📅 ทุกวันที่</option>';
     dates.forEach(d=>{
       const o = document.createElement('option');
