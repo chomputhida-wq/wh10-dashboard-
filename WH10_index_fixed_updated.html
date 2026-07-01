@@ -1960,22 +1960,24 @@ function saveHistory(importDate, watchData, old90Data){
   if(watchData && watchData.length){
     watchData.forEach(function(r){
       [['b46','46-60'],['b61','61-90'],['b90','>90']].forEach(function(pair){
-        const b = r[pair[0]];
-        if(b && b.lang > 0){
-          hist.push({
-            importDate: importDate,
-            type: 'watch',
-            mat: r.mat,
-            desc: r.desc,
-            batchBand: pair[1],
-            batch: b.batch||'',
-            lang: b.lang||0,
-            exp: b.exp||'',
-            recv: b.recv!==null?b.recv:'',
-            age711: b.age711!==null?b.age711:'',
-            เหลือ: b.เหลือ!==null&&b.เหลือ!==undefined?b.เหลือ:''
-          });
-        }
+        const list = normB(r[pair[0]]);
+        list.forEach(function(b){
+          if(b && b.lang > 0){
+            hist.push({
+              importDate: importDate,
+              type: 'watch',
+              mat: r.mat,
+              desc: r.desc,
+              batchBand: pair[1],
+              batch: b.batch||'',
+              lang: b.lang||0,
+              exp: b.exp||'',
+              recv: b.recv!==null&&b.recv!==undefined?b.recv:'',
+              age711: b.age711!==null&&b.age711!==undefined?b.age711:'',
+              เหลือ: b.เหลือ!==null&&b.เหลือ!==undefined?b.เหลือ:''
+            });
+          }
+        });
       });
     });
   }
