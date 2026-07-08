@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard ค่าขนส่ง DC 7-11 | ไทยรัฐ v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f4f8;color:#1a202c;font-size:14px;}
+.header{background:linear-gradient(135deg,#1a365d 0%,#2c5282 100%);color:white;padding:16px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,0.25);}
+.header-logo{font-size:28px;}
+.header h1{font-size:20px;font-weight:700;}
+.header p{font-size:12px;opacity:0.8;margin-top:2px;}
+.header-date{margin-left:auto;text-align:right;font-size:12px;opacity:0.85;}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;padding:0 20px;flex-wrap:wrap;}
+.tab-btn{padding:14px 18px;cursor:pointer;font-size:13px;font-weight:600;border:none;background:none;color:#718096;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s;display:flex;align-items:center;gap:6px;}
+.tab-btn:hover{color:#2b6cb0;background:#ebf8ff;}
+.tab-btn.active{color:#2b6cb0;border-bottom-color:#2b6cb0;}
+.content{padding:24px;max-width:1400px;margin:0 auto;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.card{background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.06);margin-bottom:20px;overflow:hidden;}
+.card-header{padding:14px 20px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2e8f0;}
+.card-header.blue{background:#ebf8ff;color:#2c5282;border-left:4px solid #3182ce;}
+.card-header.green{background:#f0fff4;color:#276749;border-left:4px solid #38a169;}
+.card-header.orange{background:#fffaf0;color:#744210;border-left:4px solid #dd6b20;}
+.card-header.purple{background:#faf5ff;color:#553c9a;border-left:4px solid #6b46c1;}
+.card-header.teal{background:#e6fffa;color:#234e52;border-left:4px solid #319795;}
+.card-header.red{background:#fff5f5;color:#7b341e;border-left:4px solid #c05621;}
+.card-body{padding:18px 20px;}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:#2c5282;color:white;padding:9px 12px;text-align:center;font-weight:600;white-space:nowrap;position:sticky;top:0;}
+th.base-col{background:#276749;}
+th.teal-col{background:#319795;}
+td{padding:8px 12px;text-align:center;border-bottom:1px solid #e2e8f0;}
+tr:hover td{background:#f7fafc;}
+.td-route{font-weight:700;color:#2c5282;}
+.td-dc{text-align:left;font-weight:600;}
+.td-num{font-family:'Courier New',monospace;}
+.td-base{background:#f0fff4;font-weight:700;color:#276749;}
+.td-total{background:#e6fffa;font-weight:700;color:#234e52;}
+.td-date{font-weight:700;color:#2c5282;text-align:left;white-space:nowrap;}
+.td-cost-transport{background:#ebf8ff;font-weight:600;color:#2c5282;}
+.td-cost-moving{background:#f0fff4;font-weight:600;color:#276749;}
+.td-cost-total{background:#faf5ff;font-weight:700;color:#553c9a;}
+tr.total-row td{background:#2c5282;color:white;font-weight:700;}
+tr.total-row:hover td{background:#2a4a7f;}
+tr.cost-total-row td{background:#553c9a;color:white;font-weight:700;}
+.upload-zone{border:2px dashed #90cdf4;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;background:#f7faff;transition:all 0.2s;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:#3182ce;background:#ebf8ff;}
+.upload-icon{font-size:48px;margin-bottom:12px;}
+.upload-title{font-size:18px;font-weight:700;color:#2c5282;margin-bottom:6px;}
+.upload-sub{color:#718096;font-size:13px;}
+#file-input{display:none;}
+.btn{padding:9px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary{background:#3182ce;color:white;}
+.btn-primary:hover{background:#2b6cb0;}
+.btn-success{background:#38a169;color:white;}
+.btn-success:hover{background:#2f855a;}
+.btn-danger{background:#e53e3e;color:white;}
+.btn-danger:hover{background:#c53030;}
+.btn-outline{background:white;color:#3182ce;border:1px solid #3182ce;}
+.btn-outline:hover{background:#ebf8ff;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-amber{background:#d97706;color:white;}
+.btn-amber:hover{background:#b45309;}
+.btn-teal{background:#319795;color:white;}
+.btn-teal:hover{background:#2c7a7b;}
+.btn-purple{background:#6b46c1;color:white;}
+.btn-purple:hover{background:#553c9a;}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+.summary-box{background:white;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);text-align:center;border-top:3px solid #3182ce;}
+.summary-box .val{font-size:26px;font-weight:800;color:#2c5282;}
+.summary-box .lbl{font-size:12px;color:#718096;margin-top:4px;}
+.summary-box.green{border-color:#38a169;}.summary-box.green .val{color:#276749;}
+.summary-box.orange{border-color:#dd6b20;}.summary-box.orange .val{color:#744210;}
+.summary-box.teal{border-color:#319795;}.summary-box.teal .val{color:#234e52;}
+.summary-box.purple{border-color:#6b46c1;}.summary-box.purple .val{color:#553c9a;}
+.summary-box.red{border-color:#c05621;}.summary-box.red .val{color:#7b341e;}
+.history-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;background:white;transition:all 0.2s;}
+.history-item:hover{border-color:#90cdf4;background:#f7faff;}
+.history-date{font-weight:700;color:#2c5282;min-width:110px;}
+.history-info{flex:1;font-size:13px;color:#718096;}
+.history-actions{display:flex;gap:6px;}
+.calc-controls{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:20px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+label{font-weight:600;font-size:13px;color:#4a5568;}
+select,input[type="month"],input[type="date"],input[type="text"]{padding:8px 12px;border:1px solid #cbd5e0;border-radius:8px;font-size:14px;font-family:inherit;background:white;min-width:160px;}
+select:focus,input:focus{outline:none;border-color:#3182ce;box-shadow:0 0 0 3px rgba(49,130,206,0.15);}
+.result-box{background:linear-gradient(135deg,#2c5282 0%,#3182ce 100%);color:white;border-radius:12px;padding:20px 24px;text-align:center;margin-top:20px;}
+.result-box .main-total{font-size:36px;font-weight:800;margin:6px 0;}
+.result-box .sub-label{font-size:13px;opacity:0.85;}
+.result-box .range-tag{display:inline-block;background:rgba(255,255,255,0.2);padding:3px 12px;border-radius:20px;font-size:13px;margin-top:8px;}
+.notice{padding:12px 16px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.notice-info{background:#ebf8ff;color:#2c5282;border:1px solid #90cdf4;}
+.notice-warn{background:#fffaf0;color:#744210;border:1px solid #fbd38d;}
+.notice-success{background:#f0fff4;color:#276749;border:1px solid #9ae6b4;}
+#loading{display:none;text-align:center;padding:40px;}
+.spinner{border:4px solid #e2e8f0;border-top-color:#3182ce;border-radius:50%;width:40px;height:40px;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty-state{text-align:center;padding:40px;color:#a0aec0;}
+.empty-state .empty-icon{font-size:48px;margin-bottom:12px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:white;border-radius:16px;padding:28px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.modal-box h3{font-size:17px;font-weight:700;color:#1e3a5f;margin-bottom:16px;}
+#conn-banner{position:fixed;bottom:16px;right:16px;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;z-index:500;opacity:0.92;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:all 0.3s;}
+#conn-banner.ok{background:#f0fff4;color:#276749;border:1px solid #9ae6b4;}
+#conn-banner.error{background:#fff5f5;color:#c53030;border:1px solid #fc8181;}
+#conn-banner.nourl{background:#fffaf0;color:#744210;border:1px solid #fbd38d;}
+#conn-banner.connecting{background:#ebf8ff;color:#2b6cb0;border:1px solid #90cdf4;}
+.filter-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:20px;padding:16px 20px;background:#f7faff;border-radius:10px;border:1px solid #e2e8f0;}
+.dc-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#ebf8ff;color:#2b6cb0;margin:1px;}
+.zero-cell{color:#cbd5e0;}
+.search-input{padding:8px 12px;border:1px solid #cbd5e0;border-radius:8px;font-size:13px;font-family:inherit;min-width:220px;}
+.search-input:focus{outline:none;border-color:#3182ce;}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+.badge-blue{background:#ebf8ff;color:#2b6cb0;}
+.badge-green{background:#f0fff4;color:#276749;}
+.td-product{text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-left{text-align:left;}
+tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
+@media(max-width:768px){.content{padding:12px;}.header h1{font-size:16px;}.summary-grid{grid-template-columns:1fr 1fr;}}
+.print-header{display:none;}
+.print-footer{display:none;}
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff;font-size:12px;}
+  .header,.tabs,#conn-banner,.no-print{display:none !important;}
+  .content{padding:0;max-width:100%;}
+  .card{box-shadow:none;border:1px solid #cbd5e0;break-inside:avoid;margin-bottom:14px;}
+  .card-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table{font-size:11px;}
+  th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .result-box{-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;}
+  .print-header{display:block !important;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #2c5282;}
+  .print-header h2{font-size:19px;color:#1a365d;margin-bottom:4px;}
+  .print-header p{font-size:12px;color:#4a5568;}
+  .print-footer{display:block !important;margin-top:24px;font-size:11px;color:#718096;text-align:right;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🚛</div>
+  <div>
+    <h1>Dashboard ค่าขนส่ง DC 7-11 | ไทยรัฐ</h1>
+    <p>ระบบคำนวณค่าขนส่งตามช่วงน้ำมัน — เริ่มใช้งาน 01/09/2567</p>
+  </div>
+  <div class="header-date" id="header-date"></div>
+  <button class="btn btn-amber btn-sm" onclick="openSettings()" style="margin-left:12px;">⚙️ Google Sheets</button>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('tab1')" id="btn-tab1">📋 ตารางราคาน้ำมัน</button>
+  <button class="tab-btn" onclick="showTab('tab2')" id="btn-tab2">📤 อัปโหลด DO</button>
+  <button class="tab-btn" onclick="showTab('tab3')" id="btn-tab3">🧮 คำนวณค่าขนส่ง</button>
+  <button class="tab-btn" onclick="showTab('tab4')" id="btn-tab4">📊 สรุปรายวัน</button>
+  <button class="tab-btn" onclick="showTab('tab5')" id="btn-tab5">📦 รายละเอียดสินค้า</button>
+  <button class="tab-btn" onclick="showTab('tab6')" id="btn-tab6">🏷️ สรุปรายสินค้า</button>
+</div>
+
+<div class="content">
+
+<!-- TAB 1: ตารางราคาน้ำมัน -->
+<div class="tab-panel active" id="tab1">
+  <div class="notice notice-info"><span>ℹ️</span><span>ราคาฐาน (Base on) คือ <strong>ช่วงน้ำมัน 30.01–32.00</strong> &nbsp;|&nbsp; ปรับเพิ่ม/ลด ตามตัวคูณในแต่ละช่วงน้ำมัน</span></div>
+  <div class="card">
+    <div class="card-header blue">🚚 ค่าบริการขนส่ง ไป DC 7-11 &nbsp;<span style="font-weight:400;font-size:13px;">(บาท / ลัง)</span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap"><table id="tbl-transport"></table></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header green">📦 ค่าบริการขนย้ายสินค้า (แม่รวย–ของไทยรัฐ) &nbsp;<span style="font-weight:400;font-size:13px;">(บาท / ลัง)</span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap"><table id="tbl-moving"></table></div></div>
+  </div>
+</div>
+
+<!-- TAB 2: อัปโหลด DO -->
+<div class="tab-panel" id="tab2">
+  <div class="notice notice-info"><span>📌</span><span>อัปโหลดไฟล์ DO ทุกวัน → กด <strong>💾 บันทึก</strong> → ข้อมูลจะ Sync ขึ้น Google Sheets อัตโนมัติ</span></div>
+  <div class="card">
+    <div class="card-header purple">
+      🛡️ สำรอง / นำเข้าข้อมูล
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="sync-btn" class="btn btn-success btn-sm" onclick="syncFromCloud()">☁️ Sync Cloud</button>
+        <button id="push-btn" class="btn btn-teal btn-sm" onclick="pushAllToCloud()">⬆️ อัปโหลดทั้งหมดขึ้น Cloud</button>
+        <button class="btn btn-primary btn-sm" onclick="backupData()">📦 Backup JSON</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('restore-input').click()">📂 Restore</button>
+        <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)">
+      </div>
+    </div>
+    <div class="card-body" style="padding:10px 20px;">
+      <span style="font-size:13px;color:#718096;">📊 ข้อมูลที่เก็บไว้: <strong id="stored-count">0</strong> วัน</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header orange">📤 อัปโหลดไฟล์ DO 7-11</div>
+    <div class="card-body">
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="upload-icon">📂</div>
+        <div class="upload-title">คลิกหรือลากไฟล์มาวางที่นี่</div>
+        <div class="upload-sub">รองรับไฟล์ .XLS และ .XLSX (DO 7-11 จาก SAP)</div>
+      </div>
+      <input type="file" id="file-input" accept=".xls,.xlsx" onchange="handleFileSelect(event)">
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="form-group">
+          <label>📅 วันที่ของข้อมูล (ปรับได้)</label>
+          <input type="date" id="upload-date" style="min-width:160px;">
+        </div>
+        <div style="font-size:12px;color:#718096;margin-top:18px;">⬅ ระบบดึงวันที่จากชื่อไฟล์อัตโนมัติ</div>
+      </div>
+      <div id="loading"><div class="spinner"></div><div>กำลังประมวลผลไฟล์...</div></div>
+      <div id="upload-preview" style="display:none;margin-top:20px;">
+        <div class="notice notice-success" id="upload-status"></div>
+        <div class="summary-grid" id="preview-summary"></div>
+        <!-- สรุป DC -->
+        <div style="font-weight:700;font-size:14px;color:#2d3748;margin-bottom:10px;">📊 สรุปจำนวนลัง แยกตาม DC/Route</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;">
+          <thead><tr>
+            <th style="background:#276749;padding:9px 14px;">Route</th>
+            <th style="background:#276749;padding:9px 14px;text-align:left;">DC ปลายทาง</th>
+            <th style="background:#276749;padding:9px 14px;">จำนวนลัง</th>
+          </tr></thead>
+          <tbody id="preview-table-body"></tbody>
+          <tfoot id="preview-table-foot"></tfoot>
+        </table>
+        <!-- รายการสินค้า -->
+        <div style="font-weight:700;font-size:14px;color:#2d3748;margin-bottom:10px;">📋 รายการสินค้า (<span id="preview-row-count">0</span> รายการ)</div>
+        <div class="tbl-wrap" style="max-height:320px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;">
+          <table style="font-size:12px;">
+            <thead><tr>
+              <th style="background:#553c9a;">DO</th>
+              <th style="background:#553c9a;text-align:left;">ชื่อสินค้า</th>
+              <th style="background:#553c9a;">Batch</th>
+              <th style="background:#553c9a;">จำนวน</th>
+              <th style="background:#553c9a;">Route</th>
+            </tr></thead>
+            <tbody id="preview-rows-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-success" onclick="saveTodayData()">💾 บันทึกข้อมูลวันนี้</button>
+          <button class="btn btn-outline" onclick="resetUpload()">🔄 อัปโหลดใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header purple">
+      🗄️ ประวัติข้อมูล DO
+      <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="clearAllData()">🗑️ ลบทั้งหมด</button>
+    </div>
+    <div class="card-body" id="history-container">
+      <div class="empty-state"><div class="empty-icon">📭</div><p>ยังไม่มีข้อมูล</p></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header orange">📅 สรุปจำนวนวันข้อมูล แยกตามเดือน</div>
+    <div class="card-body" id="monthly-summary-container"><div style="color:#a0aec0;text-align:center;padding:16px;">ยังไม่มีข้อมูล</div></div>
+  </div>
+</div>
+
+<!-- TAB 3: คำนวณค่าขนส่ง -->
+<div class="tab-panel" id="tab3">
+  <div class="notice notice-info"><span>💡</span><span>เลือกช่วงเวลา + ช่วงน้ำมัน ระบบจะคำนวณ <strong>ลัง × ค่าบริการ/ลัง</strong></span></div>
+  <div class="card no-print">
+    <div class="card-header blue">🎛️ ตั้งค่าการคำนวณ</div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;margin-bottom:18px;align-items:center;">
+        <span style="font-weight:600;font-size:13px;color:#4a5568;">โหมด:</span>
+        <button id="mode-month-btn" class="btn btn-primary btn-sm" onclick="setCalcMode('month')">📅 รายเดือน</button>
+        <button id="mode-day-btn" class="btn btn-outline btn-sm" onclick="setCalcMode('day')">📆 รายวัน</button>
+      </div>
+      <div class="calc-controls">
+        <div class="form-group" id="group-month"><label>📅 เดือน</label><input type="month" id="calc-month"></div>
+        <div class="form-group" id="group-day" style="display:none;"><label>📆 วันที่</label><input type="date" id="calc-day"></div>
+        <div class="form-group"><label>🚚 Route</label><select id="calc-route" style="min-width:200px;"><option value="">-- ทุก Route --</option></select></div>
+        <div class="form-group"><label>⛽ ช่วงน้ำมัน</label><select id="calc-range"><option value="">-- เลือก --</option></select></div>
+        <button class="btn btn-primary" onclick="calculateCost()">🧮 คำนวณ</button>
+        <button class="btn btn-outline" onclick="exportResult()">📥 Export CSV</button>
+        <button class="btn btn-success" onclick="printCalcResult()">🖨️ พิมพ์ / บันทึก PDF</button>
+      </div>
+    </div>
+  </div>
+  <div id="calc-result" style="display:none;">
+    <div class="print-header" id="print-header">
+      <h2>🚛 รายงานค่าขนส่ง DC 7-11 | ไทยรัฐ</h2>
+      <p id="print-subtitle"></p>
+    </div>
+    <div class="summary-grid" id="calc-summary"></div>
+    <div class="card"><div class="card-header blue">🚚 ค่าบริการขนส่ง</div>
+      <div class="card-body" style="padding:0"><div class="tbl-wrap">
+        <table><thead><tr><th>Route</th><th>DC ปลายทาง</th><th>จำนวนลัง</th><th>อัตรา (บ./ลัง)</th><th>ค่าขนส่ง (บาท)</th></tr></thead>
+        <tbody id="calc-transport-body"></tbody><tfoot id="calc-transport-foot"></tfoot></table>
+      </div></div>
+    </div>
+    <div class="card"><div class="card-header green">📦 ค่าบริการขนย้าย</div>
+      <div class="card-body" style="padding:0"><div class="tbl-wrap">
+        <table><thead><tr><th>Route</th><th>DC ปลายทาง</th><th>จำนวนลัง</th><th>อัตรา (บ./ลัง)</th><th>ค่าขนย้าย (บาท)</th></tr></thead>
+        <tbody id="calc-moving-body"></tbody><tfoot id="calc-moving-foot"></tfoot></table>
+      </div></div>
+    </div>
+    <div class="result-box">
+      <div class="sub-label">รวมค่าบริการทั้งหมด</div>
+      <div class="main-total" id="grand-total-val">฿0</div>
+      <div class="range-tag" id="grand-total-range"></div>
+    </div>
+    <div class="card" id="daily-breakdown-card" style="margin-top:20px;">
+      <div class="card-header purple">📅 รายละเอียดรายวัน</div>
+      <div class="card-body" style="padding:0"><div class="tbl-wrap">
+        <table><thead><tr><th>วันที่</th><th>Route</th><th>DC</th><th>ลัง</th></tr></thead>
+        <tbody id="daily-breakdown-body"></tbody></table>
+      </div></div>
+    </div>
+    <div class="print-footer">พิมพ์เมื่อ <span id="print-timestamp"></span></div>
+  </div>
+  <div id="calc-empty" class="empty-state">
+    <div class="empty-icon">🧮</div><p>เลือกเดือน/วัน และช่วงน้ำมัน แล้วกด "คำนวณ"</p>
+  </div>
+</div>
+
+<!-- TAB 4: สรุปรายวัน DC -->
+<div class="tab-panel" id="tab4">
+  <div class="notice notice-info"><span>📊</span><span>สรุปจำนวนลังและค่าขนส่งรายวัน แยกตาม DC</span></div>
+  <div class="filter-bar">
+    <div class="form-group"><label>📅 ตั้งแต่วันที่</label><input type="date" id="d4-from"></div>
+    <div class="form-group"><label>📅 ถึงวันที่</label><input type="date" id="d4-to"></div>
+    <div class="form-group"><label>⛽ ช่วงน้ำมัน</label><select id="d4-oil" style="min-width:220px;"><option value="">-- ไม่คำนวณค่าใช้จ่าย --</option></select></div>
+    <button class="btn btn-teal" onclick="renderTab4()">🔍 ดูข้อมูล</button>
+    <button class="btn btn-outline" onclick="setD4ThisMonth()">📅 เดือนนี้</button>
+    <button class="btn btn-outline" onclick="setD4All()">📋 ทั้งหมด</button>
+    <button class="btn btn-success" onclick="exportTab4()">📥 Export CSV</button>
+  </div>
+  <div class="summary-grid" id="d4-stats"></div>
+  <div class="card" id="d4-cost-card" style="display:none;">
+    <div class="card-header red">💰 สรุปค่าใช้จ่ายรายวัน <span id="d4-cost-label" style="font-size:12px;font-weight:400;color:#718096;margin-left:8px;"></span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap">
+      <table><thead><tr>
+        <th style="background:#1a365d;text-align:left;">วันที่</th>
+        <th style="background:#1a365d;">Route</th>
+        <th style="background:#1a365d;text-align:left;">DC</th>
+        <th style="background:#1a365d;">ลัง</th>
+        <th style="background:#2c5282;">ค่าขนส่ง</th>
+        <th style="background:#276749;">ค่าขนย้าย</th>
+        <th style="background:#553c9a;">รวม</th>
+      </tr></thead>
+      <tbody id="d4-cost-body"></tbody>
+      <tfoot id="d4-cost-foot"></tfoot>
+      </table>
+    </div></div>
+  </div>
+  <div class="card">
+    <div class="card-header purple">🏭 รายละเอียดรายวัน — จำนวนลังแยกตาม DC <span id="d4-range-label" style="font-size:12px;font-weight:400;color:#718096;margin-left:8px;"></span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap">
+      <table id="tbl-d4-dc"><thead id="d4-dc-head"></thead><tbody id="d4-dc-body"></tbody><tfoot id="d4-dc-foot"></tfoot></table>
+    </div></div>
+  </div>
+  <div id="d4-empty" class="empty-state" style="display:none;"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div>
+</div>
+
+<!-- TAB 5: รายละเอียดสินค้า -->
+<div class="tab-panel" id="tab5">
+  <div class="notice notice-info"><span>📦</span><span>แสดงทุก row จากไฟล์ DO — DO number, สินค้า, Batch, จำนวน, DC แยกตามวัน</span></div>
+  <div class="filter-bar">
+    <div class="form-group"><label>📅 ตั้งแต่วันที่</label><input type="date" id="d5-from"></div>
+    <div class="form-group"><label>📅 ถึงวันที่</label><input type="date" id="d5-to"></div>
+    <div class="form-group"><label>🚚 Route</label>
+      <select id="d5-route" style="min-width:160px;"><option value="">-- ทุก Route --</option></select>
+    </div>
+    <div class="form-group"><label>🔍 ค้นหาสินค้า</label>
+      <input type="text" class="search-input" id="d5-search" placeholder="ชื่อสินค้า / รหัส Material...">
+    </div>
+    <button class="btn btn-teal" onclick="renderTab5()">🔍 ค้นหา</button>
+    <button class="btn btn-outline" onclick="setD5ThisMonth()">📅 เดือนนี้</button>
+    <button class="btn btn-success" onclick="exportTab5()">📥 Export CSV</button>
+  </div>
+  <div class="summary-grid" id="d5-stats"></div>
+  <div class="card" id="d5-check-card"></div>
+  <div class="card">
+    <div class="card-header purple">📋 รายการ DO ทั้งหมด <span id="d5-count-label" style="font-size:12px;font-weight:400;margin-left:8px;color:#718096;"></span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap" style="max-height:600px;overflow-y:auto;">
+      <table>
+        <thead><tr>
+          <th style="text-align:left;">วันที่บันทึก</th>
+          <th>DO</th>
+          <th>Ref.doc</th>
+          <th>Deliv.date</th>
+          <th>Ship-to</th>
+          <th style="text-align:left;min-width:140px;">ชื่อสินค้า</th>
+          <th style="text-align:left;">Material</th>
+          <th>Batch</th>
+          <th>จำนวน</th>
+          <th>Route</th>
+        </tr></thead>
+        <tbody id="d5-body"></tbody>
+      </table>
+    </div></div>
+  </div>
+  <div id="d5-empty" class="empty-state" style="display:none;"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล — กรุณาอัปโหลดไฟล์ DO ในแท็บ "อัปโหลด DO"</p></div>
+</div>
+
+<!-- TAB 6: สรุปรายสินค้า -->
+<div class="tab-panel" id="tab6">
+  <div class="notice notice-info"><span>🏷️</span><span>สรุปจำนวนลังรวมแต่ละสินค้า (Material) ในช่วงเวลาที่เลือก</span></div>
+  <div class="filter-bar">
+    <div class="form-group"><label>📅 ตั้งแต่วันที่</label><input type="date" id="d6-from"></div>
+    <div class="form-group"><label>📅 ถึงวันที่</label><input type="date" id="d6-to"></div>
+    <div class="form-group"><label>🚚 Route</label>
+      <select id="d6-route" style="min-width:160px;"><option value="">-- ทุก Route --</option></select>
+    </div>
+    <button class="btn btn-teal" onclick="renderTab6()">🔍 ดูข้อมูล</button>
+    <button class="btn btn-outline" onclick="setD6ThisMonth()">📅 เดือนนี้</button>
+    <button class="btn btn-success" onclick="exportTab6()">📥 Export CSV</button>
+  </div>
+  <div class="summary-grid" id="d6-stats"></div>
+  <div class="card">
+    <div class="card-header teal">🏷️ สรุปจำนวนลัง แยกตามสินค้า <span id="d6-count-label" style="font-size:12px;font-weight:400;margin-left:8px;color:#718096;"></span></div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>ลำดับ</th>
+          <th style="text-align:left;">Material</th>
+          <th style="text-align:left;min-width:200px;">ชื่อสินค้า</th>
+          <th>รวม (CAR)</th>
+          <th>% ของยอดรวม</th>
+          <th>จำนวนวัน</th>
+          <th>Route ที่ส่ง</th>
+        </tr></thead>
+        <tbody id="d6-body"></tbody>
+        <tfoot id="d6-foot"></tfoot>
+      </table>
+    </div></div>
+  </div>
+  <div id="d6-empty" class="empty-state" style="display:none;"><div class="empty-icon">📭</div><p>ไม่พบข้อมูล</p></div>
+</div>
+
+</div><!-- end .content -->
+
+<div id="conn-banner" class="nourl">⚙️ ยังไม่ได้ตั้งค่า Google Sheets</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-box">
+    <h3>⚙️ ตั้งค่า Google Sheets</h3>
+    <p style="font-size:13px;color:#718096;margin-bottom:10px;">วาง URL จาก Google Apps Script (Deploy → Web app URL)</p>
+    <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..." style="width:100%;padding:10px 14px;border:1px solid #cbd5e0;border-radius:8px;font-size:13px;margin-bottom:10px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-outline btn-sm" onclick="testGAS()">🔍 ทดสอบ</button>
+      <button class="btn btn-success btn-sm" onclick="saveGAS()">💾 บันทึก (browser นี้)</button>
+      <button class="btn btn-purple btn-sm" onclick="saveGASPermanent()">📥 บันทึก URL ถาวรลงไฟล์</button>
+      <button class="btn btn-outline btn-sm" onclick="closeSettings()">ยกเลิก</button>
+    </div>
+    <div id="gas-test-result" style="font-size:13px;"></div>
+    <hr style="margin:14px 0;border:none;border-top:1px solid #e2e8f0;">
+    <div style="font-size:12px;color:#718096;">
+      <strong>📌 บันทึก URL ถาวรลงไฟล์</strong> = ดาวน์โหลดไฟล์ HTML ใหม่ที่มี URL ฝังอยู่ถาวร<br>
+      ใช้ไฟล์นั้นแทนไฟล์เดิม — ไม่ต้องตั้งค่าใหม่แม้เปิดจาก path อื่น หรือ GitHub Pages
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DEFAULT_GAS_URL — ฝัง URL ถาวรในไฟล์นี้
+// กด "📥 บันทึก URL ถาวรลงไฟล์" เพื่อ download ไฟล์ใหม่
+// ที่มี URL ฝังไว้แล้ว — ไม่ต้องตั้งค่าใหม่ทุกครั้ง
+// ============================================================
+const DEFAULT_GAS_URL = '';
+
+var GAS_URL = localStorage.getItem('dc711_gas_url') || DEFAULT_GAS_URL;
+if (DEFAULT_GAS_URL && !localStorage.getItem('dc711_gas_url')) {
+  localStorage.setItem('dc711_gas_url', DEFAULT_GAS_URL);
+}
+
+const OIL_RANGES = [
+  {label:'28.01–30.00',surcharge:-0.02},
+  {label:'30.01–32.00',surcharge:0,isBase:true},
+  {label:'32.01–34.00',surcharge:0.02},
+  {label:'34.01–36.00',surcharge:0.04},
+  {label:'36.01–38.00',surcharge:0.06},
+  {label:'38.01–40.00',surcharge:0.08},
+  {label:'40.01–42.00',surcharge:0.10},
+  {label:'43.01–44.00',surcharge:0.12},
+  {label:'44.01–46.00',surcharge:0.14},
+  {label:'47.01–48.00',surcharge:0.16},
+  {label:'48.01–50.00',surcharge:0.18},
+  {label:'50.01–52.00',surcharge:0.20},
+];
+const DC_BASE = [
+  {route:'Z043',code:10095,name:'บางบัวทอง',    baseTransport:4,     baseMoving:1},
+  {route:'Z042',code:10096,name:'ลาดกระบัง',    baseTransport:3.7,   baseMoving:1},
+  {route:'Z044',code:12891,name:'มหาชัย',       baseTransport:3.3,   baseMoving:1},
+  {route:'Z046',code:12709,name:'ลำพูน',        baseTransport:13.69, baseMoving:1},
+  {route:'Z074',code:13762,name:'นครสวรรค์',    baseTransport:12,    baseMoving:1},
+  {route:'Z045',code:10097,name:'ขอนแก่น',      baseTransport:10.5,  baseMoving:1},
+  {route:'Z070',code:13483,name:'บุรีรัมย์',    baseTransport:10,    baseMoving:1},
+  {route:'Z047',code:12007,name:'สุราษฎร์ธานี', baseTransport:13.49, baseMoving:1},
+  {route:'Z073',code:13704,name:'หาดใหญ่',      baseTransport:18.49, baseMoving:1},
+  {route:'Z048',code:13189,name:'ชลบุรี',       baseTransport:6,     baseMoving:1},
+];
+const DC_MAP = {};
+DC_BASE.forEach(dc=>{DC_MAP[dc.route]=dc; DC_MAP[String(dc.code)]=dc;});
+
+function getRates(dc,rangeIdx){
+  const r=OIL_RANGES[rangeIdx];
+  return {transport:+(dc.baseTransport*(1+r.surcharge)).toFixed(2),moving:+(dc.baseMoving*(1+r.surcharge)).toFixed(2)};
+}
+
+let pendingUploadData = null;
+
+// ======== INDEXEDDB STORAGE (โควตาใหญ่กว่า localStorage มาก — พอเก็บข้อมูลทั้งปี) ========
+// เดิมเก็บข้อมูล DO ทุกวันไว้ใน localStorage ซึ่งมีโควตาจำกัดแค่ไม่กี่ MB ต่อไฟล์
+// พอสะสมข้อมูลเป็นปี (มีรายละเอียดสินค้าเป็นร้อยรายการ/วัน) จะเต็มโควตาแล้วบันทึกไม่ได้
+// (ขึ้น QuotaExceededError) — ย้ายมาเก็บที่ IndexedDB แทน ซึ่งโควตาใหญ่กว่ามาก (หลักร้อย MB
+// ถึงหลาย GB แล้วแต่พื้นที่ว่างในเครื่อง) เพียงพอสำหรับเก็บข้อมูลทั้งปีโดยไม่ต้องลบของเก่าทิ้ง
+// DO_CACHE คือสำเนาข้อมูลทั้งหมดในหน่วยความจำ ใช้อ่านแบบ synchronous เหมือนโค้ดเดิมทุกจุด
+const IDB_NAME='dc711db', IDB_STORE='do_entries', IDB_VERSION=1;
+let DO_CACHE={};
+let _idbPromise=null;
+function idbOpen(){
+  if(_idbPromise)return _idbPromise;
+  _idbPromise=new Promise((resolve,reject)=>{
+    if(!window.indexedDB){reject(new Error('no-indexeddb'));return;}
+    const req=indexedDB.open(IDB_NAME,IDB_VERSION);
+    req.onupgradeneeded=(e)=>{const db=e.target.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE,{keyPath:'date'});};
+    req.onsuccess=(e)=>resolve(e.target.result);
+    req.onerror=(e)=>reject(e.target.error);
+  });
+  return _idbPromise;
+}
+function idbPut(entry){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(entry);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbDelete(date){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(date);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbClearAll(){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).clear();
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbGetAll(){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);
+  }));
+}
+// ย้ายข้อมูลเก่าที่เคยอยู่ใน localStorage (do_YYYY-MM-DD) มาไว้ใน IndexedDB ครั้งเดียวตอนเปิดไฟล์
+// แล้วเคลียร์ localStorage ส่วนนั้นทิ้งเพื่อคืนโควตาเดิม — ทำครั้งเดียวอัตโนมัติ ไม่ต้องกดอะไรเพิ่ม
+function migrateLocalStorageToIDB(){
+  const oldKeys=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('do_'))oldKeys.push(k);}
+  if(!oldKeys.length)return Promise.resolve(0);
+  const entries=[];
+  oldKeys.forEach(k=>{try{const v=JSON.parse(localStorage.getItem(k));if(v&&v.date)entries.push(v);}catch(e){}});
+  return Promise.all(entries.map(e=>idbPut(e))).then(()=>{
+    oldKeys.forEach(k=>localStorage.removeItem(k));
+    return entries.length;
+  });
+}
+function reloadCache(){
+  return idbGetAll().then(list=>{DO_CACHE={};list.forEach(e=>{DO_CACHE[e.date]=e;});});
+}
+
+// ======== SETTINGS / GAS ========
+function openSettings(){document.getElementById('gas-url-input').value=GAS_URL;document.getElementById('gas-test-result').textContent='';document.getElementById('settings-modal').classList.add('open');}
+function closeSettings(){document.getElementById('settings-modal').classList.remove('open');}
+function saveGAS(){
+  var u=document.getElementById('gas-url-input').value.trim();
+  GAS_URL=u;localStorage.setItem('dc711_gas_url',u);
+  closeSettings();updateBanner(u?'connecting':'nourl');
+  if(u)syncFromCloud();
+}
+function saveGASPermanent(){
+  var u=document.getElementById('gas-url-input').value.trim();
+  var el=document.getElementById('gas-test-result');
+  if(!u){el.innerHTML='<span style="color:#c53030;">⚠️ กรุณาใส่ URL ก่อน</span>';return;}
+  fetch(window.location.href).then(r=>r.text()).then(html=>{
+    var updated=html.replace(/const DEFAULT_GAS_URL = '.*?';/,"const DEFAULT_GAS_URL = '"+u.replace(/'/g,"\\'")+"';");
+    var blob=new Blob([updated],{type:'text/html;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dashboard-dc711-v5.html';a.click();URL.revokeObjectURL(a.href);
+    GAS_URL=u;localStorage.setItem('dc711_gas_url',u);
+    closeSettings();updateBanner('connecting');setTimeout(()=>syncFromCloud(),300);
+    alert('✅ ดาวน์โหลดไฟล์ใหม่เรียบร้อย!\n\nใช้ไฟล์นี้แทนไฟล์เดิม — URL ถูกฝังถาวร');
+  }).catch(()=>{GAS_URL=u;localStorage.setItem('dc711_gas_url',u);closeSettings();updateBanner('connecting');if(u)syncFromCloud();});
+}
+function testGAS(){
+  var u=document.getElementById('gas-url-input').value.trim();
+  var el=document.getElementById('gas-test-result');
+  if(!u){el.textContent='⚠️ กรุณาใส่ URL';el.style.color='#c53030';return;}
+  el.textContent='🔄 กำลังทดสอบ...';el.style.color='#2b6cb0';
+  fetch(u+'?action=load_do').then(r=>r.json()).then(d=>{
+    if(Array.isArray(d)){el.textContent='✅ เชื่อมต่อสำเร็จ! พบข้อมูล '+d.length+' วัน';el.style.color='#276749';}
+    else{el.textContent='⚠️ เชื่อมต่อได้ แต่ข้อมูลไม่ถูกรูปแบบ';el.style.color='#744210';}
+  }).catch(()=>{el.textContent='❌ เชื่อมต่อไม่ได้';el.style.color='#c53030';});
+}
+function updateBanner(state,count){
+  var b=document.getElementById('conn-banner');b.className=state;
+  if(state==='ok')b.textContent='✅ เชื่อมต่อ Google Sheets'+(count!==undefined?' ('+count+' วัน)':'');
+  else if(state==='error')b.textContent='❌ เชื่อมต่อไม่ได้';
+  else if(state==='nourl')b.textContent='⚙️ ยังไม่ได้ตั้งค่า Google Sheets';
+  else if(state==='connecting')b.textContent='🔄 กำลังเชื่อมต่อ...';
+}
+function syncFromCloud(){
+  if(!GAS_URL){updateBanner('nourl');return;}
+  var btn=document.getElementById('sync-btn');
+  if(btn){btn.textContent='🔄 กำลัง Sync...';btn.disabled=true;}
+  updateBanner('connecting');
+  fetch(GAS_URL+'?action=load_do').then(r=>r.json()).then(entries=>{
+    if(!Array.isArray(entries))throw new Error('bad');
+    var tasks=[];
+    entries.forEach(e=>{
+      if(e.date&&e.dcTotals){
+        var nd=normalizeDate(e.date);
+        var existing=DO_CACHE[nd]||{};
+        // Merge: dcTotals always comes from cloud (source of truth for totals).
+        // rows (product-level detail) — prefer cloud rows only if the cloud actually
+        // has them; otherwise keep whatever local rows this browser already has,
+        // so we never silently wipe out row detail that only exists locally.
+        var cloudRows=(e.rows&&e.rows.length)?e.rows:null;
+        var entry={date:nd,filename:e.filename||'',dcTotals:e.dcTotals,rows:cloudRows||existing.rows||[]};
+        tasks.push(idbPut(entry).then(()=>{DO_CACHE[nd]=entry;}));
+      }
+    });
+    return Promise.all(tasks);
+  }).then(()=>{
+    renderHistory();updateStoredCount();updateBanner('ok',Object.keys(DO_CACHE).length);
+    if(btn){btn.textContent='☁️ Sync Cloud';btn.disabled=false;}
+  }).catch(()=>{updateBanner('error');if(btn){btn.textContent='☁️ Sync Cloud';btn.disabled=false;}});
+}
+function saveToCloud(entry){
+  if(!GAS_URL)return;
+  fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'save_do',date:entry.date,filename:entry.filename||'',dcTotals:entry.dcTotals,rows:entry.rows||[]})
+  }).catch(()=>{});
+}
+function pushAllToCloud(){
+  if(!GAS_URL){alert('กรุณาตั้งค่า Google Sheets ก่อน');return;}
+  var entries=getStoredEntries();if(!entries.length){alert('ไม่มีข้อมูล');return;}
+  var btn=document.getElementById('push-btn');if(btn){btn.textContent='🔄 กำลังอัปโหลด...';btn.disabled=true;}
+  var total=entries.length,i=0;
+  function next(){
+    if(i>=total){alert('✅ อัปโหลด '+total+' วัน เรียบร้อย');updateBanner('ok',total);if(btn){btn.textContent='⬆️ อัปโหลดทั้งหมดขึ้น Cloud';btn.disabled=false;}return;}
+    if(btn)btn.textContent='🔄 อัปโหลด '+(i+1)+'/'+total+'...';
+    var e=entries[i++];
+    fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save_do',date:e.date,filename:e.filename||'',dcTotals:e.dcTotals,rows:e.rows||[]})
+    }).then(()=>next()).catch(()=>next());
+  }
+  next();
+}
+
+// ======== FILE PARSING ========
+function onDragOver(e){e.preventDefault();document.getElementById('upload-zone').classList.add('drag-over');}
+function onDragLeave(){document.getElementById('upload-zone').classList.remove('drag-over');}
+function onDrop(e){e.preventDefault();document.getElementById('upload-zone').classList.remove('drag-over');if(e.dataTransfer.files.length>0)processFile(e.dataTransfer.files[0]);}
+function handleFileSelect(e){if(e.target.files.length>0)processFile(e.target.files[0]);}
+
+function processFile(file){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('upload-preview').style.display='none';
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const ab=e.target.result;const bytes=new Uint8Array(ab);let result;
+      if(bytes[0]===0xFF&&bytes[1]===0xFE){
+        const text=new TextDecoder('utf-16le').decode(ab.slice(2));
+        result=parseDOText(text);
+      } else {
+        const wb=XLSX.read(bytes,{type:'array',raw:true});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        result=parseDORows(XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
+      }
+      result.filename=file.name;
+      const fnMatch=file.name.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+      const detectedDate=fnMatch?`${fnMatch[3]}-${fnMatch[2]}-${fnMatch[1]}`:new Date().toISOString().slice(0,10);
+      document.getElementById('upload-date').value=detectedDate;
+      result.date=detectedDate;pendingUploadData=result;showUploadPreview(result);
+    }catch(err){alert('เกิดข้อผิดพลาด: '+err.message);}
+    document.getElementById('loading').style.display='none';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// SAP export บางครั้งมีคอลัมน์ว่างนำหน้า 1 คอลัมน์ บางครั้ง 2 คอลัมน์ (แล้วแต่ layout ที่ export)
+// ทำให้ index คงที่แบบเดิมใช้ไม่ได้เสมอไป — ฟังก์ชันนี้หาตำแหน่ง "Route" (เช่น Z042) ในแถวก่อน
+// แล้วอ่านฟิลด์อื่นๆ แบบ "นับถอยจาก Route" แทน ซึ่งตำแหน่งสัมพัทธ์คงที่ไม่ว่าจะมีคอลัมน์ว่างนำหน้ากี่คอลัมน์
+// ลำดับคอลัมน์จริงของ SAP (นับจาก Route): ...Delivery,Ref.doc,Deliv.date,Ship-to,ShipToName,Material,Description,Batch,Qty,SU(CAR),Route,SLoc
+function extractRowFields(p,route,qty){
+  const routeIdx=p.indexOf(route);
+  if(routeIdx>=10){
+    return{
+      delivery:p[routeIdx-10]||'',
+      refDoc:p[routeIdx-9]||'',
+      delivDate:p[routeIdx-8]||'',
+      shipTo:p[routeIdx-7]||'',
+      dcName:p[routeIdx-6]||'',
+      material:p[routeIdx-5]||'',
+      description:p[routeIdx-4]||'',
+      batch:p[routeIdx-3]||'',
+      quantity:qty,
+      route:route,
+      sloc:p[routeIdx+1]||''
+    };
+  }
+  return{delivery:'',refDoc:'',delivDate:'',shipTo:'',dcName:DC_MAP[route]?DC_MAP[route].name:'',material:'',description:'',batch:'',quantity:qty,route:route,sloc:''};
+}
+
+function parseDOText(text){
+  const dcTotals={};const rows=[];
+  for(const line of text.split(/\r?\n/)){
+    const p=line.split('\t').map(s=>s.trim());
+    const route=p.find(x=>/^Z\d{3}$/.test(x));if(!route)continue;
+    let qty=null;
+    for(let j=0;j<p.length;j++){if(p[j]==='CAR'&&j>=1){const q=parseFloat(p[j-1].replace(/[\s,]/g,''));if(q>0&&q<100000)qty=q;}}
+    if(!qty)continue;
+    dcTotals[route]=(dcTotals[route]||0)+qty;
+    rows.push(extractRowFields(p,route,qty));
+  }
+  return {dcTotals,rows};
+}
+
+function parseDORows(rowsArr){
+  const dcTotals={};const rows=[];
+  for(const row of rowsArr){
+    const p=row.map(c=>String(c||'').replace(/_x[0-9a-fA-F]{4}_/g,'').trim());
+    if(p.every(x=>!x))continue;
+    const route=p.find(x=>/^Z\d{3}$/.test(x));if(!route)continue;
+    let qty=null;
+    for(let j=0;j<p.length;j++){if(p[j]==='CAR'&&j>=1){const q=parseFloat(p[j-1].replace(/[\s,]/g,''));if(q>0&&q<100000)qty=q;}}
+    if(!qty)continue;
+    dcTotals[route]=(dcTotals[route]||0)+qty;
+    rows.push(extractRowFields(p,route,qty));
+  }
+  return {dcTotals,rows};
+}
+
+function showUploadPreview(result){
+  document.getElementById('upload-preview').style.display='block';
+  const total=Object.values(result.dcTotals).reduce((a,b)=>a+b,0);
+  const dcCount=Object.keys(result.dcTotals).length;
+  const rowCount=(result.rows||[]).length;
+  document.getElementById('upload-status').innerHTML=`✅ อ่านไฟล์ <strong>${result.filename}</strong> สำเร็จ | วันที่ <strong>${thaiDate(result.date)}</strong>`;
+  document.getElementById('preview-summary').innerHTML=`
+    <div class="summary-box"><div class="val">${total.toLocaleString()}</div><div class="lbl">ลังทั้งหมด</div></div>
+    <div class="summary-box green"><div class="val">${dcCount}</div><div class="lbl">DC ที่มีการส่ง</div></div>
+    <div class="summary-box purple"><div class="val">${rowCount.toLocaleString()}</div><div class="lbl">รายการสินค้า</div></div>`;
+  const tbody=document.getElementById('preview-table-body');tbody.innerHTML='';let tq=0;
+  for(const dc of DC_BASE){const qty=result.dcTotals[dc.route]||0;if(!qty)continue;tq+=qty;tbody.innerHTML+=`<tr><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td><td class="td-num" style="font-weight:600;">${qty.toLocaleString()}</td></tr>`;}
+  document.getElementById('preview-table-foot').innerHTML=`<tr class="total-row"><td colspan="2" style="text-align:right;">รวม</td><td>${tq.toLocaleString()}</td></tr>`;
+  // Show rows preview
+  document.getElementById('preview-row-count').textContent=rowCount.toLocaleString();
+  const rb=document.getElementById('preview-rows-body');rb.innerHTML='';
+  (result.rows||[]).forEach(r=>{rb.innerHTML+=`<tr><td>${r.delivery}</td><td class="td-left" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.description}</td><td>${r.batch}</td><td class="td-num">${r.quantity}</td><td class="td-route">${r.route}</td></tr>`;});
+}
+
+function saveTodayData(){
+  if(!pendingUploadData){alert('⚠️ ไม่พบข้อมูลไฟล์ที่จะบันทึก กรุณาอัปโหลดไฟล์ DO ใหม่อีกครั้งก่อนกดบันทึก');return;}
+  const d=document.getElementById('upload-date').value;
+  if(d)pendingUploadData.date=d;
+  const entry=pendingUploadData;
+  idbPut(entry).then(()=>{
+    DO_CACHE[entry.date]=entry;
+    saveToCloud(entry);renderHistory();updateStoredCount();
+    pendingUploadData=null;resetUpload();updateBanner('ok');
+    alert(`✅ บันทึกข้อมูลวันที่ ${thaiDate(d)} เรียบร้อย!`);
+  }).catch(err=>{
+    alert('❌ บันทึกไม่สำเร็จ: '+(err&&err.message?err.message:'เกิดข้อผิดพลาดไม่ทราบสาเหตุ')+'\n\nลองรีเฟรชหน้าแล้วลองใหม่อีกครั้งค่ะ');
+  });
+}
+function resetUpload(){document.getElementById('upload-preview').style.display='none';document.getElementById('file-input').value='';pendingUploadData=null;}
+
+// ======== LOCAL STORAGE ========
+function getStoredEntries(){
+  const arr=Object.values(DO_CACHE);
+  if(arr.length)return arr;
+  // สำรอง: เผื่อ IndexedDB ใช้งานไม่ได้ในเบราว์เซอร์นี้ ให้ลองอ่านจาก localStorage แบบเดิม
+  const entries=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('do_')){try{entries.push(JSON.parse(localStorage.getItem(k)));}catch(e){}}}
+  return entries;
+}
+function getAllRows(){
+  const all=[];
+  getStoredEntries().forEach(e=>{(e.rows||[]).forEach(r=>all.push({...r,recordDate:e.date}));});
+  return all;
+}
+function updateStoredCount(){const el=document.getElementById('stored-count');if(el)el.textContent=getStoredEntries().length;}
+function renderHistory(){
+  updateStoredCount();renderMonthlySummary();
+  const c=document.getElementById('history-container');
+  const entries=getStoredEntries();
+  if(!entries.length){c.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><p>ยังไม่มีข้อมูล</p></div>`;return;}
+  entries.sort((a,b)=>b.date.localeCompare(a.date));
+  c.innerHTML=entries.map(e=>{
+    const total=Object.values(e.dcTotals).reduce((a,b)=>a+b,0);
+    const dc=Object.keys(e.dcTotals).length;
+    const rows=(e.rows||[]).length;
+    return `<div class="history-item"><div style="font-size:20px;">📄</div><div class="history-date">${thaiDate(e.date)}</div><div class="history-info">${total.toLocaleString()} ลัง | ${dc} DC | ${rows} รายการสินค้า</div><div class="history-actions"><button class="btn btn-outline btn-sm" onclick="viewEntry('${e.date}')">👁 ดู</button><button class="btn btn-danger btn-sm" onclick="deleteEntry('${e.date}')">🗑</button></div></div>`;
+  }).join('');
+}
+function viewEntry(date){
+  const data=DO_CACHE[date]||JSON.parse(localStorage.getItem('do_'+date)||'null');if(!data)return;
+  pendingUploadData=data;document.getElementById('upload-date').value=data.date||date;
+  showUploadPreview(data);showTab('tab2');document.getElementById('upload-preview').scrollIntoView({behavior:'smooth'});
+}
+function deleteEntry(date){
+  if(!confirm(`ลบข้อมูลวันที่ ${thaiDate(date)}?`))return;
+  idbDelete(date).then(()=>{delete DO_CACHE[date];localStorage.removeItem('do_'+date);renderHistory();});
+}
+function clearAllData(){
+  if(!confirm('ลบข้อมูลทั้งหมด?'))return;
+  idbClearAll().then(()=>{
+    DO_CACHE={};
+    const keys=[];for(let i=0;i<localStorage.length;i++){if(localStorage.key(i).startsWith('do_'))keys.push(localStorage.key(i));}
+    keys.forEach(k=>localStorage.removeItem(k));renderHistory();
+  });
+}
+function backupData(){
+  const entries=getStoredEntries();if(!entries.length){alert('ไม่มีข้อมูล');return;}
+  const blob=new Blob([JSON.stringify({version:2,exportDate:new Date().toISOString(),totalDays:entries.length,data:entries},null,2)],{type:'application/json'});
+  const a=document.createElement('a');const now=new Date();
+  a.href=URL.createObjectURL(blob);a.download=`DO_Backup_v5_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;a.click();
+  URL.revokeObjectURL(a.href);alert(`✅ สำรองข้อมูล ${entries.length} วัน เรียบร้อย`);
+}
+function restoreData(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const backup=JSON.parse(e.target.result);if(!backup.data||!Array.isArray(backup.data)){alert('ไฟล์ไม่ถูกต้อง');return;}
+      let imported=0,skipped=0;const tasks=[];
+      for(const entry of backup.data){
+        if(!entry.date||!entry.dcTotals){skipped++;continue;}
+        if(DO_CACHE[entry.date]){skipped++;continue;}
+        tasks.push(idbPut(entry).then(()=>{DO_CACHE[entry.date]=entry;imported++;}));
+      }
+      Promise.all(tasks).then(()=>{
+        alert(`✅ นำเข้าสำเร็จ\n✔ เพิ่มใหม่: ${imported} วัน\n⏭ ข้าม: ${skipped} วัน`);renderHistory();
+      });
+    }catch(err){alert('เกิดข้อผิดพลาด: '+err.message);}
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
+function renderMonthlySummary(){
+  const c=document.getElementById('monthly-summary-container');if(!c)return;
+  const entries=getStoredEntries();
+  if(!entries.length){c.innerHTML=`<div style="color:#a0aec0;text-align:center;padding:16px;">ยังไม่มีข้อมูล</div>`;return;}
+  const byMonth={};
+  for(const e of entries){const ym=e.date.slice(0,7);if(!byMonth[ym])byMonth[ym]={days:0,boxes:0};byMonth[ym].days++;byMonth[ym].boxes+=Object.values(e.dcTotals).reduce((a,b)=>a+b,0);}
+  const months=Object.keys(byMonth).sort().reverse();
+  c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:12px;">${months.map(ym=>`<div style="background:#fffaf0;border:1px solid #fbd38d;border-radius:10px;padding:14px 18px;min-width:160px;text-align:center;"><div style="font-weight:700;color:#744210;font-size:15px;">${monthThai(ym)}</div><div style="font-size:22px;font-weight:800;color:#dd6b20;margin:4px 0;">${byMonth[ym].days} วัน</div><div style="font-size:12px;color:#718096;">${byMonth[ym].boxes.toLocaleString()} ลังรวม</div></div>`).join('')}</div>`;
+}
+
+// ======== TAB 1: PRICE TABLE ========
+function buildPriceTables(){buildTable('tbl-transport','transport');buildTable('tbl-moving','moving');}
+function buildTable(id,type){
+  const tbl=document.getElementById(id);
+  let th=`<thead><tr><th style="min-width:70px;">Route</th><th style="min-width:110px;text-align:left;">DC ปลายทาง</th>`;
+  OIL_RANGES.forEach(r=>{th+=`<th ${r.isBase?'class="base-col"':''} style="min-width:90px;">ช่วง ${r.label}${r.isBase?'<br><small>⭐ฐาน</small>':''}</th>`;});
+  th+=`</tr></thead>`;
+  let tbody='<tbody>';
+  DC_BASE.forEach(dc=>{
+    tbody+=`<tr><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td>`;
+    OIL_RANGES.forEach((r,i)=>{const rt=getRates(dc,i);const v=type==='transport'?rt.transport:rt.moving;tbody+=`<td class="td-num ${r.isBase?'td-base':''}">${v.toFixed(2)}</td>`;});
+    tbody+='</tr>';
+  });
+  tbl.innerHTML=th+tbody+'</tbody>';
+}
+
+// ======== TAB 3: CALCULATE ========
+let _calcMode='month',_lastCalcData=null;
+function setCalcMode(mode){
+  _calcMode=mode;
+  document.getElementById('group-month').style.display=mode==='month'?'':'none';
+  document.getElementById('group-day').style.display=mode==='day'?'':'none';
+  document.getElementById('mode-month-btn').className=mode==='month'?'btn btn-primary btn-sm':'btn btn-outline btn-sm';
+  document.getElementById('mode-day-btn').className=mode==='day'?'btn btn-primary btn-sm':'btn btn-outline btn-sm';
+  document.getElementById('calc-result').style.display='none';
+  document.getElementById('calc-empty').style.display='block';
+}
+function calculateCost(){
+  const rangeIdx=parseInt(document.getElementById('calc-range').value);
+  if(isNaN(rangeIdx)){alert('กรุณาเลือกช่วงน้ำมัน');return;}
+  let entries,periodLabel,isDayMode=(_calcMode==='day');
+  if(isDayMode){
+    const dv=document.getElementById('calc-day').value;if(!dv){alert('กรุณาเลือกวันที่');return;}
+    entries=getStoredEntries().filter(e=>e.date===dv);
+    if(!entries.length){alert(`ไม่พบข้อมูล DO สำหรับวันที่ ${thaiDate(dv)}`);return;}
+    periodLabel=thaiDate(dv);
+  }else{
+    const mv=document.getElementById('calc-month').value;if(!mv){alert('กรุณาเลือกเดือน');return;}
+    entries=getStoredEntries().filter(e=>e.date.startsWith(mv));
+    if(!entries.length){alert(`ไม่พบข้อมูล DO สำหรับเดือน ${monthThai(mv)}`);return;}
+    periodLabel=monthThai(mv);
+  }
+  const selRoute=document.getElementById('calc-route').value;
+  const totals={};
+  for(const e of entries){for(const[route,qty] of Object.entries(e.dcTotals)){if(selRoute&&route!==selRoute)continue;if(!totals[route])totals[route]=0;totals[route]+=qty;}}
+  const range=OIL_RANGES[rangeIdx];let totalBoxes=0,totalTransport=0,totalMoving=0;
+  const tRows=[],mRows=[];
+  const dcList=selRoute?DC_BASE.filter(dc=>dc.route===selRoute):DC_BASE;
+  for(const dc of dcList){
+    const qty=totals[dc.route]||0;if(!qty)continue;
+    const rates=getRates(dc,rangeIdx);const tc=+(qty*rates.transport).toFixed(2);const mc=+(qty*rates.moving).toFixed(2);
+    totalBoxes+=qty;totalTransport+=tc;totalMoving+=mc;
+    tRows.push({...dc,qty,rate:rates.transport,cost:tc});
+    mRows.push({...dc,qty,rate:rates.moving,cost:mc});
+  }
+  _lastCalcData={isDayMode,periodLabel,selRoute,rangeIdx,range,tRows,mRows,totalBoxes,totalTransport,totalMoving,entries};
+  document.getElementById('calc-summary').innerHTML=`
+    <div class="summary-box"><div class="val">${totalBoxes.toLocaleString()}</div><div class="lbl">ลังทั้งหมด</div></div>
+    <div class="summary-box green"><div class="val">${entries.length}</div><div class="lbl">${isDayMode?'ไฟล์ DO':'วันที่มีข้อมูล'}</div></div>
+    <div class="summary-box orange"><div class="val">฿${totalTransport.toLocaleString(undefined,{minimumFractionDigits:2})}</div><div class="lbl">ค่าขนส่งรวม</div></div>
+    <div class="summary-box purple"><div class="val">฿${totalMoving.toLocaleString(undefined,{minimumFractionDigits:2})}</div><div class="lbl">ค่าขนย้ายรวม</div></div>`;
+  const mkR=(rows,fid,bid)=>{let sub=0;document.getElementById(bid).innerHTML=rows.map(r=>{sub+=r.cost;return`<tr><td class="td-route">${r.route}</td><td class="td-dc">${r.name}</td><td class="td-num">${r.qty.toLocaleString()}</td><td class="td-num">${r.rate.toFixed(2)}</td><td class="td-num" style="font-weight:700;">฿${r.cost.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;}).join('');document.getElementById(fid).innerHTML=`<tr class="total-row"><td colspan="4" style="text-align:right;">รวม</td><td>฿${sub.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;};
+  mkR(tRows,'calc-transport-foot','calc-transport-body');mkR(mRows,'calc-moving-foot','calc-moving-body');
+  const grand=totalTransport+totalMoving;
+  document.getElementById('grand-total-val').textContent='฿'+grand.toLocaleString(undefined,{minimumFractionDigits:2});
+  document.getElementById('grand-total-range').textContent=`ช่วงน้ำมัน ${range.label}${selRoute?' | Route '+selRoute:''}`;
+  const bd=document.getElementById('daily-breakdown-card');
+  if(isDayMode){bd.style.display='none';}else{
+    bd.style.display='';entries.sort((a,b)=>a.date.localeCompare(b.date));let html='';
+    for(const e of entries){for(const dc of DC_BASE){const qty=e.dcTotals[dc.route]||0;if(!qty)continue;html+=`<tr><td>${thaiDate(e.date)}</td><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td><td class="td-num">${qty.toLocaleString()}</td></tr>`;}}
+    document.getElementById('daily-breakdown-body').innerHTML=html;
+  }
+  const ps=document.getElementById('print-subtitle');
+  if(ps)ps.textContent=`ช่วงเวลา: ${periodLabel}${selRoute?' | Route '+selRoute:''} | ช่วงน้ำมัน ${range.label}`;
+  document.getElementById('calc-result').style.display='block';
+  document.getElementById('calc-empty').style.display='none';
+}
+function printCalcResult(){
+  if(!_lastCalcData){alert('กรุณากด คำนวณ ก่อน');return;}
+  const ts=document.getElementById('print-timestamp');
+  if(ts)ts.textContent=new Date().toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'});
+  showTab('tab3');
+  setTimeout(()=>window.print(),50);
+}
+function exportResult(){
+  if(!_lastCalcData){alert('กรุณากด คำนวณ ก่อน');return;}
+  const{periodLabel,range,tRows,mRows,totalTransport,totalMoving}=_lastCalcData;
+  let csv=`DC 7-11 ค่าขนส่ง | ${periodLabel} | ช่วงน้ำมัน ${range.label}\n\nค่าบริการขนส่ง\nRoute,DC,ลัง,อัตรา,ค่าขนส่ง\n`;
+  tRows.forEach(r=>{csv+=`${r.route},${r.name},${r.qty},${r.rate.toFixed(2)},${r.cost.toFixed(2)}\n`;});
+  csv+=`,,,,${totalTransport.toFixed(2)}\n\nค่าบริการขนย้าย\nRoute,DC,ลัง,อัตรา,ค่าขนย้าย\n`;
+  mRows.forEach(r=>{csv+=`${r.route},${r.name},${r.qty},${r.rate.toFixed(2)},${r.cost.toFixed(2)}\n`;});
+  csv+=`,,,,${totalMoving.toFixed(2)}\n\nรวมทั้งหมด,,,,${(totalTransport+totalMoving).toFixed(2)}\n`;
+  dl('﻿'+csv,`DC711_${periodLabel}.csv`,'text/csv;charset=utf-8');
+}
+
+// ======== TAB 4: DAILY SUMMARY ========
+function setD4ThisMonth(){const now=new Date();document.getElementById('d4-from').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;document.getElementById('d4-to').value=now.toISOString().slice(0,10);renderTab4();}
+function setD4All(){const entries=getStoredEntries();if(!entries.length)return;const dates=entries.map(e=>e.date).sort();document.getElementById('d4-from').value=dates[0];document.getElementById('d4-to').value=dates[dates.length-1];renderTab4();}
+function renderTab4(){
+  const from=document.getElementById('d4-from').value,to=document.getElementById('d4-to').value;
+  const oilVal=document.getElementById('d4-oil').value;const oilIdx=oilVal===''?null:parseInt(oilVal);
+  const entries=getStoredEntries().filter(e=>(!from||e.date>=from)&&(!to||e.date<=to));
+  entries.sort((a,b)=>a.date.localeCompare(b.date));
+  const rl=document.getElementById('d4-range-label');
+  if(from&&to)rl.textContent=`${thaiDate(from)} — ${thaiDate(to)}`;
+  const emp=document.getElementById('d4-empty'),stats=document.getElementById('d4-stats'),costCard=document.getElementById('d4-cost-card');
+  if(!entries.length){emp.style.display='block';stats.innerHTML='';costCard.style.display='none';document.getElementById('d4-dc-head').innerHTML='';document.getElementById('d4-dc-body').innerHTML='';document.getElementById('d4-dc-foot').innerHTML='';return;}
+  emp.style.display='none';
+  const totalBoxes=entries.reduce((s,e)=>s+Object.values(e.dcTotals).reduce((a,b)=>a+b,0),0);
+  const avg=Math.round(totalBoxes/entries.length);
+  let statsExtra='';
+  if(oilIdx!==null){
+    let gT=0,gM=0;
+    for(const e of entries){for(const dc of DC_BASE){const q=e.dcTotals[dc.route]||0;if(!q)continue;const rt=getRates(dc,oilIdx);gT+=q*rt.transport;gM+=q*rt.moving;}}
+    statsExtra=`<div class="summary-box orange"><div class="val">฿${Math.round(gT).toLocaleString()}</div><div class="lbl">ค่าขนส่งรวม</div></div><div class="summary-box green"><div class="val">฿${Math.round(gM).toLocaleString()}</div><div class="lbl">ค่าขนย้ายรวม</div></div><div class="summary-box purple"><div class="val">฿${Math.round(gT+gM).toLocaleString()}</div><div class="lbl">รวมทั้งหมด</div></div>`;
+  }
+  stats.innerHTML=`<div class="summary-box teal"><div class="val">${entries.length}</div><div class="lbl">วันที่มีข้อมูล</div></div><div class="summary-box"><div class="val">${totalBoxes.toLocaleString()}</div><div class="lbl">ลังรวม</div></div><div class="summary-box green"><div class="val">${avg.toLocaleString()}</div><div class="lbl">เฉลี่ย/วัน</div></div>${statsExtra}`;
+  // cost table
+  if(oilIdx!==null){
+    costCard.style.display='';
+    document.getElementById('d4-cost-label').textContent='ช่วงน้ำมัน '+OIL_RANGES[oilIdx].label;
+    let body='',gQ=0,gT2=0,gM2=0,gA=0;
+    for(const e of entries){
+      const aDCs=DC_BASE.filter(dc=>(e.dcTotals[dc.route]||0)>0);if(!aDCs.length)continue;
+      let dQ=0,dT=0,dM=0;let first=true;
+      for(const dc of aDCs){
+        const q=e.dcTotals[dc.route]||0;const rt=getRates(dc,oilIdx);const tc=+(q*rt.transport).toFixed(2);const mc=+(q*rt.moving).toFixed(2);
+        dQ+=q;dT+=tc;dM+=mc;
+        body+=first?`<tr style="border-top:2px solid #e2e8f0;"><td class="td-date" rowspan="${aDCs.length}" style="vertical-align:middle;background:#f7faff;">${thaiDate(e.date)}</td><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td><td class="td-num">${q.toLocaleString()}</td><td class="td-cost-transport td-num">฿${tc.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-cost-moving td-num">฿${mc.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-cost-total td-num">฿${(tc+mc).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`:`<tr><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td><td class="td-num">${q.toLocaleString()}</td><td class="td-cost-transport td-num">฿${tc.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-cost-moving td-num">฿${mc.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-cost-total td-num">฿${(tc+mc).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+        first=false;
+      }
+      body+=`<tr class="subtotal-row"><td colspan="3" style="text-align:right;padding:7px 12px;">รวม ${thaiDateShort(e.date)}</td><td class="td-num">${dQ.toLocaleString()}</td><td class="td-num">฿${dT.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-num">฿${dM.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td class="td-num">฿${(dT+dM).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+      gQ+=dQ;gT2+=dT;gM2+=dM;gA+=dT+dM;
+    }
+    document.getElementById('d4-cost-body').innerHTML=body;
+    document.getElementById('d4-cost-foot').innerHTML=`<tr class="cost-total-row"><td colspan="3" style="text-align:right;padding:10px;">รวมทั้งหมด</td><td>${gQ.toLocaleString()}</td><td>฿${gT2.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>฿${gM2.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>฿${gA.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+  }else{costCard.style.display='none';}
+  // DC table
+  const aDCs=DC_BASE.filter(dc=>entries.some(e=>(e.dcTotals[dc.route]||0)>0));
+  let head=`<tr><th style="text-align:left;min-width:150px;background:#553c9a;">วันที่</th>`;
+  aDCs.forEach(dc=>{head+=`<th style="min-width:80px;background:#553c9a;font-size:12px;">${dc.route}<br><small style="opacity:.85;">${dc.name}</small></th>`;});
+  head+=`<th class="teal-col">รวม</th></tr>`;
+  document.getElementById('d4-dc-head').innerHTML=head;
+  let body2='',colTot={},grand2=0;aDCs.forEach(dc=>{colTot[dc.route]=0;});
+  for(const e of entries){
+    const rt=aDCs.reduce((s,dc)=>s+(e.dcTotals[dc.route]||0),0);grand2+=rt;
+    body2+=`<tr><td class="td-date">${thaiDate(e.date)}<br><span class="dc-pill">${aDCs.filter(dc=>(e.dcTotals[dc.route]||0)>0).length} DC</span></td>`;
+    aDCs.forEach(dc=>{const q=e.dcTotals[dc.route]||0;colTot[dc.route]+=q;body2+=q>0?`<td class="td-num" style="font-weight:600;">${q.toLocaleString()}</td>`:`<td class="zero-cell">—</td>`;});
+    body2+=`<td class="td-total td-num">${rt.toLocaleString()}</td></tr>`;
+  }
+  document.getElementById('d4-dc-body').innerHTML=body2;
+  let foot=`<tr class="total-row"><td style="text-align:right;">รวมทั้งหมด</td>`;
+  aDCs.forEach(dc=>{foot+=`<td>${(colTot[dc.route]||0).toLocaleString()}</td>`;});
+  foot+=`<td>${grand2.toLocaleString()}</td></tr>`;
+  document.getElementById('d4-dc-foot').innerHTML=foot;
+}
+function exportTab4(){
+  const from=document.getElementById('d4-from').value,to=document.getElementById('d4-to').value;
+  const entries=getStoredEntries().filter(e=>(!from||e.date>=from)&&(!to||e.date<=to));
+  if(!entries.length){alert('ไม่มีข้อมูล');return;}
+  entries.sort((a,b)=>a.date.localeCompare(b.date));
+  const aDCs=DC_BASE.filter(dc=>entries.some(e=>(e.dcTotals[dc.route]||0)>0));
+  let csv=`สรุปรายวัน DC 7-11 | ${from} ถึง ${to}\nวันที่,${aDCs.map(dc=>dc.route+' '+dc.name).join(',')},ลังรวม\n`;
+  for(const e of entries){const rt=aDCs.reduce((s,dc)=>s+(e.dcTotals[dc.route]||0),0);csv+=`${e.date},${aDCs.map(dc=>e.dcTotals[dc.route]||0).join(',')},${rt}\n`;}
+  const ct=aDCs.map(dc=>entries.reduce((s,e)=>s+(e.dcTotals[dc.route]||0),0));
+  csv+=`รวม,${ct.join(',')},${ct.reduce((a,b)=>a+b,0)}\n`;
+  dl('﻿'+csv,`DC711_สรุป_${from}_${to}.csv`,'text/csv;charset=utf-8');
+}
+
+// ======== TAB 5: PRODUCT DETAIL ========
+function setD5ThisMonth(){const now=new Date();document.getElementById('d5-from').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;document.getElementById('d5-to').value=now.toISOString().slice(0,10);}
+function renderTab5(){
+  const from=document.getElementById('d5-from').value,to=document.getElementById('d5-to').value;
+  const selRoute=document.getElementById('d5-route').value;
+  const search=document.getElementById('d5-search').value.trim().toLowerCase();
+  let rows=getAllRows().filter(r=>{
+    if(from&&r.recordDate<from)return false;
+    if(to&&r.recordDate>to)return false;
+    if(selRoute&&r.route!==selRoute)return false;
+    if(search&&!r.description.toLowerCase().includes(search)&&!r.material.toLowerCase().includes(search)&&!r.delivery.toLowerCase().includes(search))return false;
+    return true;
+  });
+  rows.sort((a,b)=>a.recordDate.localeCompare(b.recordDate)||a.route.localeCompare(b.route));
+  const totalQty=rows.reduce((s,r)=>s+r.quantity,0);
+  const emp=document.getElementById('d5-empty');
+  document.getElementById('d5-count-label').textContent=`${rows.length.toLocaleString()} รายการ | รวม ${totalQty.toLocaleString()} ลัง`;
+  document.getElementById('d5-stats').innerHTML=`
+    <div class="summary-box"><div class="val">${rows.length.toLocaleString()}</div><div class="lbl">รายการ DO</div></div>
+    <div class="summary-box green"><div class="val">${totalQty.toLocaleString()}</div><div class="lbl">ลังรวม</div></div>
+    <div class="summary-box purple"><div class="val">${new Set(rows.map(r=>r.material)).size}</div><div class="lbl">ชนิดสินค้า</div></div>
+    <div class="summary-box teal"><div class="val">${new Set(rows.map(r=>r.recordDate)).size}</div><div class="lbl">วันที่</div></div>`;
+  renderD5Check(from,to,selRoute);
+  if(!rows.length){emp.style.display='block';document.getElementById('d5-body').innerHTML='';return;}
+  emp.style.display='none';
+  document.getElementById('d5-body').innerHTML=rows.map(r=>`<tr>
+    <td>${thaiDate(r.recordDate)}</td>
+    <td class="td-num">${r.delivery}</td>
+    <td class="td-num">${r.refDoc}</td>
+    <td>${r.delivDate}</td>
+    <td class="td-num">${r.shipTo}</td>
+    <td class="td-left" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.description}">${r.description}</td>
+    <td class="td-num">${r.material}</td>
+    <td class="td-num">${r.batch}</td>
+    <td class="td-num">${r.quantity.toLocaleString()}</td>
+    <td class="td-route">${r.route}</td>
+  </tr>`).join('');
+}
+// ตรวจสอบว่ายอดลังตาม "สรุป DO" (dcTotals) กับยอดลังที่รวมจาก "รายละเอียดสินค้า" (rows)
+// ตรงกันหรือไม่ในแต่ละวัน — ช่วยหาว่าวันไหนที่รายละเอียดสินค้าขาดหาย/ไม่ครบ
+function renderD5Check(from,to,selRoute){
+  const card=document.getElementById('d5-check-card');if(!card)return;
+  const entries=getStoredEntries().filter(e=>(!from||e.date>=from)&&(!to||e.date<=to));
+  const list=entries.map(e=>{
+    const dcSum=Object.entries(e.dcTotals||{}).reduce((s,[route,q])=>(!selRoute||route===selRoute)?s+q:s,0);
+    const rowsSum=(e.rows||[]).reduce((s,r)=>(!selRoute||r.route===selRoute)?s+(r.quantity||0):s,0);
+    return{date:e.date,dcSum,rowsSum,diff:dcSum-rowsSum,rowCount:(e.rows||[]).length};
+  }).filter(x=>x.dcSum>0||x.rowsSum>0);
+  const mismatched=list.filter(x=>x.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)||a.date.localeCompare(b.date));
+  if(!list.length){card.innerHTML='';return;}
+  if(!mismatched.length){
+    card.innerHTML=`<div class="card-header green">✅ ตรวจสอบข้อมูล</div><div class="card-body"><div class="notice notice-success" style="margin:0;">ยอดลังจาก "สรุป DO" กับ "รายละเอียดสินค้า" ตรงกันครบทุกวันในช่วงที่เลือก</div></div>`;
+    return;
+  }
+  const totalDiff=mismatched.reduce((s,x)=>s+x.diff,0);
+  card.innerHTML=`
+    <div class="card-header red">⚠️ ตรวจสอบข้อมูล — พบ ${mismatched.length} วัน ที่รายละเอียดสินค้าไม่ครบ (ขาดรวม ${totalDiff.toLocaleString()} ลัง)</div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap"><table>
+      <thead><tr>
+        <th style="text-align:left;background:#c05621;">วันที่</th>
+        <th style="background:#c05621;">ลังตามสรุป DO</th>
+        <th style="background:#c05621;">ลังตามรายละเอียดสินค้า</th>
+        <th style="background:#c05621;">ขาดไป</th>
+        <th style="background:#c05621;">รายการสินค้าที่มี</th>
+      </tr></thead>
+      <tbody>${mismatched.map(x=>`<tr><td class="td-date">${thaiDate(x.date)}</td><td class="td-num">${x.dcSum.toLocaleString()}</td><td class="td-num">${x.rowsSum.toLocaleString()}</td><td class="td-num" style="color:#c53030;font-weight:700;">${x.diff.toLocaleString()}</td><td class="td-num">${x.rowCount.toLocaleString()}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="notice notice-warn" style="margin:14px 20px;">💡 วันที่ในตารางนี้ยังไม่มีรายละเอียดสินค้ารายบรรทัดครบในเบราว์เซอร์นี้ (มักเกิดจากอัปโหลดไฟล์ DO จากเครื่อง/เบราว์เซอร์อื่น แล้ว sync มาแค่ยอดรวม) — วิธีแก้: อัปโหลดไฟล์ DO ของวันนั้นซ้ำในแท็บ "อัปโหลด DO" หรือกด "⬆️ อัปโหลดทั้งหมดขึ้น Cloud" จากเครื่องที่มีไฟล์ต้นฉบับครบ (ต้อง deploy Google Apps Script เวอร์ชันล่าสุดก่อน)</div>
+    </div>`;
+}
+function exportTab5(){
+  const from=document.getElementById('d5-from').value,to=document.getElementById('d5-to').value;
+  const selRoute=document.getElementById('d5-route').value;
+  const search=document.getElementById('d5-search').value.trim().toLowerCase();
+  let rows=getAllRows().filter(r=>{
+    if(from&&r.recordDate<from)return false;if(to&&r.recordDate>to)return false;
+    if(selRoute&&r.route!==selRoute)return false;
+    if(search&&!r.description.toLowerCase().includes(search)&&!r.material.toLowerCase().includes(search))return false;
+    return true;
+  });
+  rows.sort((a,b)=>a.recordDate.localeCompare(b.recordDate));
+  let csv='วันที่บันทึก,Delivery,Ref.doc,Deliv.date,Ship-to,ชื่อสินค้า,Material,Batch,จำนวน,Route\n';
+  rows.forEach(r=>{csv+=`${r.recordDate},${r.delivery},${r.refDoc},${r.delivDate},${r.shipTo},"${r.description}",${r.material},${r.batch},${r.quantity},${r.route}\n`;});
+  dl('﻿'+csv,`DC711_รายละเอียดสินค้า_${from||'all'}_${to||'all'}.csv`,'text/csv;charset=utf-8');
+}
+
+// ======== TAB 6: MATERIAL SUMMARY ========
+function setD6ThisMonth(){const now=new Date();document.getElementById('d6-from').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;document.getElementById('d6-to').value=now.toISOString().slice(0,10);}
+function renderTab6(){
+  const from=document.getElementById('d6-from').value,to=document.getElementById('d6-to').value;
+  const selRoute=document.getElementById('d6-route').value;
+  let rows=getAllRows().filter(r=>{
+    if(from&&r.recordDate<from)return false;if(to&&r.recordDate>to)return false;
+    if(selRoute&&r.route!==selRoute)return false;
+    return true;
+  });
+  const emp=document.getElementById('d6-empty');
+  if(!rows.length){emp.style.display='block';document.getElementById('d6-body').innerHTML='';document.getElementById('d6-foot').innerHTML='';document.getElementById('d6-stats').innerHTML='';return;}
+  emp.style.display='none';
+  // Pivot by material
+  const byMat={};
+  rows.forEach(r=>{
+    if(!byMat[r.material])byMat[r.material]={material:r.material,description:r.description,total:0,dates:new Set(),routes:new Set()};
+    byMat[r.material].total+=r.quantity;
+    byMat[r.material].dates.add(r.recordDate);
+    byMat[r.material].routes.add(r.route);
+  });
+  const items=Object.values(byMat).sort((a,b)=>b.total-a.total);
+  const grandTotal=items.reduce((s,i)=>s+i.total,0);
+  document.getElementById('d6-count-label').textContent=`${items.length} ชนิดสินค้า | รวม ${grandTotal.toLocaleString()} ลัง`;
+  document.getElementById('d6-stats').innerHTML=`
+    <div class="summary-box teal"><div class="val">${items.length}</div><div class="lbl">ชนิดสินค้า</div></div>
+    <div class="summary-box"><div class="val">${grandTotal.toLocaleString()}</div><div class="lbl">ลังรวม</div></div>
+    <div class="summary-box green"><div class="val">${new Set(rows.map(r=>r.recordDate)).size}</div><div class="lbl">วันที่มีข้อมูล</div></div>
+    <div class="summary-box purple"><div class="val">${new Set(rows.map(r=>r.route)).size}</div><div class="lbl">Route</div></div>`;
+  document.getElementById('d6-body').innerHTML=items.map((item,idx)=>`<tr>
+    <td class="td-num" style="font-weight:700;color:#718096;">${idx+1}</td>
+    <td class="td-num td-left">${item.material}</td>
+    <td class="td-left" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.description}">${item.description}</td>
+    <td class="td-num" style="font-weight:700;">${item.total.toLocaleString()}</td>
+    <td class="td-num">${grandTotal?(item.total/grandTotal*100).toFixed(1):'0.0'}%</td>
+    <td class="td-num">${item.dates.size}</td>
+    <td style="text-align:left;">${[...item.routes].sort().map(r=>`<span class="dc-pill">${r}</span>`).join('')}</td>
+  </tr>`).join('');
+  document.getElementById('d6-foot').innerHTML=`<tr class="total-row"><td colspan="3" style="text-align:right;">รวมทั้งหมด</td><td>${grandTotal.toLocaleString()}</td><td>100.0%</td><td></td><td></td></tr>`;
+}
+function exportTab6(){
+  const from=document.getElementById('d6-from').value,to=document.getElementById('d6-to').value;
+  const selRoute=document.getElementById('d6-route').value;
+  let rows=getAllRows().filter(r=>{if(from&&r.recordDate<from)return false;if(to&&r.recordDate>to)return false;if(selRoute&&r.route!==selRoute)return false;return true;});
+  const byMat={};
+  rows.forEach(r=>{if(!byMat[r.material])byMat[r.material]={material:r.material,description:r.description,total:0,dates:new Set(),routes:new Set()};byMat[r.material].total+=r.quantity;byMat[r.material].dates.add(r.recordDate);byMat[r.material].routes.add(r.route);});
+  const items=Object.values(byMat).sort((a,b)=>b.total-a.total);
+  const grandTotal=items.reduce((s,i)=>s+i.total,0);
+  let csv='ลำดับ,Material,ชื่อสินค้า,รวม (CAR),% ของยอดรวม,จำนวนวัน,Route\n';
+  items.forEach((i,idx)=>{csv+=`${idx+1},${i.material},"${i.description}",${i.total},${grandTotal?(i.total/grandTotal*100).toFixed(1):'0.0'}%,${i.dates.size},"${[...i.routes].sort().join(', ')}"\n`;});
+  dl('﻿'+csv,`DC711_สรุปสินค้า_${from||'all'}_${to||'all'}.csv`,'text/csv;charset=utf-8');
+}
+
+// ======== UTILS ========
+function dl(content,filename,type){const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
+function normalizeDate(d){
+  if(!d)return d;d=String(d).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d))return d;
+  if(/^\d{4}-\d{2}-\d{2}T/.test(d)){var dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(d))return d.replace(/\//g,'-');
+  var m=d.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);if(m)return m[3]+'-'+m[2]+'-'+m[1];
+  m=d.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(m)return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  if(!isNaN(d)&&+d>1){var dt2=new Date((+d-25569)*86400*1000);if(!isNaN(dt2.getTime()))return dt2.toISOString().slice(0,10);}
+  return d;
+}
+function thaiDate(ds){if(!ds)return'';try{var n=normalizeDate(ds);var dt=new Date(n+'T00:00:00');if(isNaN(dt.getTime()))return ds;return dt.toLocaleDateString('th-TH',{weekday:'short',year:'numeric',month:'long',day:'numeric'});}catch(e){return ds;}}
+function thaiDateShort(ds){if(!ds)return'';try{var n=normalizeDate(ds);var dt=new Date(n+'T00:00:00');if(isNaN(dt.getTime()))return ds;return dt.toLocaleDateString('th-TH',{month:'short',day:'numeric'});}catch(e){return ds;}}
+function monthThai(ym){if(!ym)return'';try{return new Date(ym+'-01T00:00:00').toLocaleDateString('th-TH',{year:'numeric',month:'long'});}catch(e){return ym;}}
+
+function showTab(tabId){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.getElementById('btn-'+tabId).classList.add('active');
+  if(tabId==='tab4'){initDateRange('d4');renderTab4();}
+  if(tabId==='tab5'){initDateRange('d5');renderTab5();}
+  if(tabId==='tab6'){initDateRange('d6');renderTab6();}
+}
+function initDateRange(prefix){
+  const now=new Date();
+  const from=document.getElementById(prefix+'-from'),to=document.getElementById(prefix+'-to');
+  if(!from.value)from.value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  if(!to.value)to.value=now.toISOString().slice(0,10);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();
+  document.getElementById('header-date').innerHTML=`วันที่ ${now.toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+  // Temp folder warning
+  const p=(window.location.href||'').toLowerCase();
+  if(p.includes('/temp/')||p.includes('%5ctemp%5c')){
+    const w=document.createElement('div');w.id='temp-warn';
+    w.style.cssText='background:#fff5f5;color:#c53030;border-bottom:2px solid #fc8181;padding:10px 20px;font-size:13px;text-align:center;font-weight:600;';
+    w.innerHTML='⚠️ ไฟล์นี้เปิดจากโฟลเดอร์ชั่วคราว — ข้อมูลอาจหายได้ | แนะนำ: บันทึกไฟล์ไปไว้ที่ Desktop หรือ GitHub Pages &nbsp;<button onclick="document.getElementById(\'temp-warn\').remove()" style="background:#c53030;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;">ปิด</button>';
+    document.body.insertBefore(w,document.body.firstChild);
+  }
+  // Auto-open settings if no GAS URL
+  if(!GAS_URL){setTimeout(()=>{openSettings();document.getElementById('gas-test-result').innerHTML='<span style="color:#744210;">⚠️ กรุณาใส่ URL แล้วกด 📥 บันทึก URL ถาวรลงไฟล์</span>';},600);}
+  // Init selects
+  const now2=new Date();
+  const m=String(now2.getMonth()+1).padStart(2,'0');
+  document.getElementById('calc-month').value=`${now2.getFullYear()}-${m}`;
+  document.getElementById('calc-day').value=`${now2.getFullYear()}-${m}-${String(now2.getDate()).padStart(2,'0')}`;
+  const crs=document.getElementById('calc-range');OIL_RANGES.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`ช่วงน้ำมัน ${r.label}${r.isBase?' ⭐ (ฐาน)':''}`;crs.appendChild(o);});
+  const d4o=document.getElementById('d4-oil');OIL_RANGES.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`ช่วงน้ำมัน ${r.label}${r.isBase?' ⭐ (ฐาน)':''}`;d4o.appendChild(o);});
+  const cr=document.getElementById('calc-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;cr.appendChild(o);});
+  const d5r=document.getElementById('d5-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;d5r.appendChild(o);});
+  const d6r=document.getElementById('d6-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;d6r.appendChild(o);});
+  // โหลดข้อมูลจาก IndexedDB (โควตาใหญ่กว่า localStorage มาก พอสำหรับเก็บข้อมูลทั้งปี)
+  // และย้ายข้อมูลเก่าที่เคยอยู่ใน localStorage (do_...) มาไว้ที่นี่แบบอัตโนมัติครั้งเดียว
+  migrateLocalStorageToIDB().then(()=>reloadCache()).then(()=>{
+    buildPriceTables();renderHistory();updateStoredCount();
+    if(GAS_URL)syncFromCloud();else updateBanner('nourl');
+  }).catch(err=>{
+    console.error('IndexedDB ใช้งานไม่ได้ในเบราว์เซอร์นี้ ระบบจะใช้ localStorage แบบเดิมแทน (เก็บข้อมูลได้จำกัดกว่า)',err);
+    buildPriceTables();renderHistory();updateStoredCount();
+    if(GAS_URL)syncFromCloud();else updateBanner('nourl');
+  });
+});
+</script>
+</body>
+</html>
