@@ -123,6 +123,22 @@ select:focus,input:focus{outline:none;border-color:#3182ce;box-shadow:0 0 0 3px 
 .td-left{text-align:left;}
 tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
 @media(max-width:768px){.content{padding:12px;}.header h1{font-size:16px;}.summary-grid{grid-template-columns:1fr 1fr;}}
+.print-header{display:none;}
+.print-footer{display:none;}
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff;font-size:12px;}
+  .header,.tabs,#conn-banner,.no-print{display:none !important;}
+  .content{padding:0;max-width:100%;}
+  .card{box-shadow:none;border:1px solid #cbd5e0;break-inside:avoid;margin-bottom:14px;}
+  .card-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table{font-size:11px;}
+  th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .result-box{-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;}
+  .print-header{display:block !important;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #2c5282;}
+  .print-header h2{font-size:19px;color:#1a365d;margin-bottom:4px;}
+  .print-header p{font-size:12px;color:#4a5568;}
+  .print-footer{display:block !important;margin-top:24px;font-size:11px;color:#718096;text-align:right;}
+}
 </style>
 </head>
 <body>
@@ -249,7 +265,7 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
 <!-- TAB 3: คำนวณค่าขนส่ง -->
 <div class="tab-panel" id="tab3">
   <div class="notice notice-info"><span>💡</span><span>เลือกช่วงเวลา + ช่วงน้ำมัน ระบบจะคำนวณ <strong>ลัง × ค่าบริการ/ลัง</strong></span></div>
-  <div class="card">
+  <div class="card no-print">
     <div class="card-header blue">🎛️ ตั้งค่าการคำนวณ</div>
     <div class="card-body">
       <div style="display:flex;gap:8px;margin-bottom:18px;align-items:center;">
@@ -264,10 +280,15 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
         <div class="form-group"><label>⛽ ช่วงน้ำมัน</label><select id="calc-range"><option value="">-- เลือก --</option></select></div>
         <button class="btn btn-primary" onclick="calculateCost()">🧮 คำนวณ</button>
         <button class="btn btn-outline" onclick="exportResult()">📥 Export CSV</button>
+        <button class="btn btn-success" onclick="printCalcResult()">🖨️ พิมพ์ / บันทึก PDF</button>
       </div>
     </div>
   </div>
   <div id="calc-result" style="display:none;">
+    <div class="print-header" id="print-header">
+      <h2>🚛 รายงานค่าขนส่ง DC 7-11 | ไทยรัฐ</h2>
+      <p id="print-subtitle"></p>
+    </div>
     <div class="summary-grid" id="calc-summary"></div>
     <div class="card"><div class="card-header blue">🚚 ค่าบริการขนส่ง</div>
       <div class="card-body" style="padding:0"><div class="tbl-wrap">
@@ -293,6 +314,7 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
         <tbody id="daily-breakdown-body"></tbody></table>
       </div></div>
     </div>
+    <div class="print-footer">พิมพ์เมื่อ <span id="print-timestamp"></span></div>
   </div>
   <div id="calc-empty" class="empty-state">
     <div class="empty-icon">🧮</div><p>เลือกเดือน/วัน และช่วงน้ำมัน แล้วกด "คำนวณ"</p>
@@ -355,6 +377,7 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
     <button class="btn btn-success" onclick="exportTab5()">📥 Export CSV</button>
   </div>
   <div class="summary-grid" id="d5-stats"></div>
+  <div class="card" id="d5-check-card"></div>
   <div class="card">
     <div class="card-header purple">📋 รายการ DO ทั้งหมด <span id="d5-count-label" style="font-size:12px;font-weight:400;margin-left:8px;color:#718096;"></span></div>
     <div class="card-body" style="padding:0"><div class="tbl-wrap" style="max-height:600px;overflow-y:auto;">
@@ -397,9 +420,11 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
     <div class="card-body" style="padding:0"><div class="tbl-wrap">
       <table>
         <thead><tr>
+          <th>ลำดับ</th>
           <th style="text-align:left;">Material</th>
           <th style="text-align:left;min-width:200px;">ชื่อสินค้า</th>
           <th>รวม (CAR)</th>
+          <th>% ของยอดรวม</th>
           <th>จำนวนวัน</th>
           <th>Route ที่ส่ง</th>
         </tr></thead>
@@ -442,7 +467,7 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
 // กด "📥 บันทึก URL ถาวรลงไฟล์" เพื่อ download ไฟล์ใหม่
 // ที่มี URL ฝังไว้แล้ว — ไม่ต้องตั้งค่าใหม่ทุกครั้ง
 // ============================================================
-const DEFAULT_GAS_URL = '';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyytdT8gF7oQhSHKpn00aluYgZm_sWDzVVoKIUSEKlfCyStvCXLBBGGqy_TmckRU6Lx/exec';
 
 var GAS_URL = localStorage.getItem('dc711_gas_url') || DEFAULT_GAS_URL;
 if (DEFAULT_GAS_URL && !localStorage.getItem('dc711_gas_url')) {
@@ -485,6 +510,71 @@ function getRates(dc,rangeIdx){
 
 let pendingUploadData = null;
 
+// ======== INDEXEDDB STORAGE (โควตาใหญ่กว่า localStorage มาก — พอเก็บข้อมูลทั้งปี) ========
+// เดิมเก็บข้อมูล DO ทุกวันไว้ใน localStorage ซึ่งมีโควตาจำกัดแค่ไม่กี่ MB ต่อไฟล์
+// พอสะสมข้อมูลเป็นปี (มีรายละเอียดสินค้าเป็นร้อยรายการ/วัน) จะเต็มโควตาแล้วบันทึกไม่ได้
+// (ขึ้น QuotaExceededError) — ย้ายมาเก็บที่ IndexedDB แทน ซึ่งโควตาใหญ่กว่ามาก (หลักร้อย MB
+// ถึงหลาย GB แล้วแต่พื้นที่ว่างในเครื่อง) เพียงพอสำหรับเก็บข้อมูลทั้งปีโดยไม่ต้องลบของเก่าทิ้ง
+// DO_CACHE คือสำเนาข้อมูลทั้งหมดในหน่วยความจำ ใช้อ่านแบบ synchronous เหมือนโค้ดเดิมทุกจุด
+const IDB_NAME='dc711db', IDB_STORE='do_entries', IDB_VERSION=1;
+let DO_CACHE={};
+let _idbPromise=null;
+function idbOpen(){
+  if(_idbPromise)return _idbPromise;
+  _idbPromise=new Promise((resolve,reject)=>{
+    if(!window.indexedDB){reject(new Error('no-indexeddb'));return;}
+    const req=indexedDB.open(IDB_NAME,IDB_VERSION);
+    req.onupgradeneeded=(e)=>{const db=e.target.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE,{keyPath:'date'});};
+    req.onsuccess=(e)=>resolve(e.target.result);
+    req.onerror=(e)=>reject(e.target.error);
+  });
+  return _idbPromise;
+}
+function idbPut(entry){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(entry);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbDelete(date){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(date);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbClearAll(){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).clear();
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+  }));
+}
+function idbGetAll(){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);
+  }));
+}
+// ย้ายข้อมูลเก่าที่เคยอยู่ใน localStorage (do_YYYY-MM-DD) มาไว้ใน IndexedDB ครั้งเดียวตอนเปิดไฟล์
+// แล้วเคลียร์ localStorage ส่วนนั้นทิ้งเพื่อคืนโควตาเดิม — ทำครั้งเดียวอัตโนมัติ ไม่ต้องกดอะไรเพิ่ม
+function migrateLocalStorageToIDB(){
+  const oldKeys=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('do_'))oldKeys.push(k);}
+  if(!oldKeys.length)return Promise.resolve(0);
+  const entries=[];
+  oldKeys.forEach(k=>{try{const v=JSON.parse(localStorage.getItem(k));if(v&&v.date)entries.push(v);}catch(e){}});
+  return Promise.all(entries.map(e=>idbPut(e))).then(()=>{
+    oldKeys.forEach(k=>localStorage.removeItem(k));
+    return entries.length;
+  });
+}
+function reloadCache(){
+  return idbGetAll().then(list=>{DO_CACHE={};list.forEach(e=>{DO_CACHE[e.date]=e;});});
+}
+
 // ======== SETTINGS / GAS ========
 function openSettings(){document.getElementById('gas-url-input').value=GAS_URL;document.getElementById('gas-test-result').textContent='';document.getElementById('settings-modal').classList.add('open');}
 function closeSettings(){document.getElementById('settings-modal').classList.remove('open');}
@@ -498,14 +588,25 @@ function saveGASPermanent(){
   var u=document.getElementById('gas-url-input').value.trim();
   var el=document.getElementById('gas-test-result');
   if(!u){el.innerHTML='<span style="color:#c53030;">⚠️ กรุณาใส่ URL ก่อน</span>';return;}
-  fetch(window.location.href).then(r=>r.text()).then(html=>{
+  // เดิมใช้ fetch(window.location.href) เพื่ออ่าน HTML ของไฟล์ตัวเอง แล้วแก้ DEFAULT_GAS_URL
+  // แต่ถ้าเปิดไฟล์แบบ file:// (ดับเบิลคลิกเปิดตรงๆ ไม่ได้ผ่านเว็บเซิร์ฟเวอร์) เบราว์เซอร์ส่วนใหญ่
+  // (โดยเฉพาะ Chrome/Edge) จะบล็อก fetch ไปยัง file:// ด้วยเหตุผลด้านความปลอดภัย ทำให้ promise
+  // reject แล้วเข้า .catch() ซึ่งไม่ได้ดาวน์โหลดไฟล์ใหม่และไม่ขึ้น alert ใดๆ — ผู้ใช้จึงรู้สึกว่า
+  // "กดบันทึกไม่ได้" (กดแล้วไม่มีอะไรเกิดขึ้นเลย) แก้โดยอ่าน HTML ปัจจุบันจาก DOM ในหน่วยความจำ
+  // โดยตรง (document.documentElement.outerHTML) แทนการ fetch ไฟล์ตัวเอง — ใช้ได้ทั้ง file:// และ
+  // http(s):// เหมือนกัน ไม่พึ่งพา network/file access เลย
+  try{
+    var html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
     var updated=html.replace(/const DEFAULT_GAS_URL = '.*?';/,"const DEFAULT_GAS_URL = '"+u.replace(/'/g,"\\'")+"';");
     var blob=new Blob([updated],{type:'text/html;charset=utf-8'});
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dashboard-dc711-v5.html';a.click();URL.revokeObjectURL(a.href);
     GAS_URL=u;localStorage.setItem('dc711_gas_url',u);
     closeSettings();updateBanner('connecting');setTimeout(()=>syncFromCloud(),300);
     alert('✅ ดาวน์โหลดไฟล์ใหม่เรียบร้อย!\n\nใช้ไฟล์นี้แทนไฟล์เดิม — URL ถูกฝังถาวร');
-  }).catch(()=>{GAS_URL=u;localStorage.setItem('dc711_gas_url',u);closeSettings();updateBanner('connecting');if(u)syncFromCloud();});
+  }catch(err){
+    GAS_URL=u;localStorage.setItem('dc711_gas_url',u);closeSettings();updateBanner('connecting');if(u)syncFromCloud();
+    alert('⚠️ บันทึก URL ลงไฟล์ใหม่ไม่สำเร็จ (ตั้งค่าไว้ในเบราว์เซอร์นี้แล้ว): '+(err&&err.message?err.message:'unknown error'));
+  }
 }
 function testGAS(){
   var u=document.getElementById('gas-url-input').value.trim();
@@ -531,17 +632,23 @@ function syncFromCloud(){
   updateBanner('connecting');
   fetch(GAS_URL+'?action=load_do').then(r=>r.json()).then(entries=>{
     if(!Array.isArray(entries))throw new Error('bad');
-    var count=0;
+    var tasks=[];
     entries.forEach(e=>{
       if(e.date&&e.dcTotals){
         var nd=normalizeDate(e.date);
-        var existing=JSON.parse(localStorage.getItem('do_'+nd)||'{}');
-        // Merge: keep rows if already stored locally, take dcTotals from cloud
-        var entry={date:nd,filename:e.filename||'',dcTotals:e.dcTotals,rows:e.rows||existing.rows||[]};
-        localStorage.setItem('do_'+nd,JSON.stringify(entry));count++;
+        var existing=DO_CACHE[nd]||{};
+        // Merge: dcTotals always comes from cloud (source of truth for totals).
+        // rows (product-level detail) — prefer cloud rows only if the cloud actually
+        // has them; otherwise keep whatever local rows this browser already has,
+        // so we never silently wipe out row detail that only exists locally.
+        var cloudRows=(e.rows&&e.rows.length)?e.rows:null;
+        var entry={date:nd,filename:e.filename||'',dcTotals:e.dcTotals,rows:cloudRows||existing.rows||[]};
+        tasks.push(idbPut(entry).then(()=>{DO_CACHE[nd]=entry;}));
       }
     });
-    renderHistory();updateStoredCount();updateBanner('ok',count);
+    return Promise.all(tasks);
+  }).then(()=>{
+    renderHistory();updateStoredCount();updateBanner('ok',Object.keys(DO_CACHE).length);
     if(btn){btn.textContent='☁️ Sync Cloud';btn.disabled=false;}
   }).catch(()=>{updateBanner('error');if(btn){btn.textContent='☁️ Sync Cloud';btn.disabled=false;}});
 }
@@ -599,6 +706,30 @@ function processFile(file){
   reader.readAsArrayBuffer(file);
 }
 
+// SAP export บางครั้งมีคอลัมน์ว่างนำหน้า 1 คอลัมน์ บางครั้ง 2 คอลัมน์ (แล้วแต่ layout ที่ export)
+// ทำให้ index คงที่แบบเดิมใช้ไม่ได้เสมอไป — ฟังก์ชันนี้หาตำแหน่ง "Route" (เช่น Z042) ในแถวก่อน
+// แล้วอ่านฟิลด์อื่นๆ แบบ "นับถอยจาก Route" แทน ซึ่งตำแหน่งสัมพัทธ์คงที่ไม่ว่าจะมีคอลัมน์ว่างนำหน้ากี่คอลัมน์
+// ลำดับคอลัมน์จริงของ SAP (นับจาก Route): ...Delivery,Ref.doc,Deliv.date,Ship-to,ShipToName,Material,Description,Batch,Qty,SU(CAR),Route,SLoc
+function extractRowFields(p,route,qty){
+  const routeIdx=p.indexOf(route);
+  if(routeIdx>=10){
+    return{
+      delivery:p[routeIdx-10]||'',
+      refDoc:p[routeIdx-9]||'',
+      delivDate:p[routeIdx-8]||'',
+      shipTo:p[routeIdx-7]||'',
+      dcName:p[routeIdx-6]||'',
+      material:p[routeIdx-5]||'',
+      description:p[routeIdx-4]||'',
+      batch:p[routeIdx-3]||'',
+      quantity:qty,
+      route:route,
+      sloc:p[routeIdx+1]||''
+    };
+  }
+  return{delivery:'',refDoc:'',delivDate:'',shipTo:'',dcName:DC_MAP[route]?DC_MAP[route].name:'',material:'',description:'',batch:'',quantity:qty,route:route,sloc:''};
+}
+
 function parseDOText(text){
   const dcTotals={};const rows=[];
   for(const line of text.split(/\r?\n/)){
@@ -608,13 +739,7 @@ function parseDOText(text){
     for(let j=0;j<p.length;j++){if(p[j]==='CAR'&&j>=1){const q=parseFloat(p[j-1].replace(/[\s,]/g,''));if(q>0&&q<100000)qty=q;}}
     if(!qty)continue;
     dcTotals[route]=(dcTotals[route]||0)+qty;
-    // Extract full row details (14 col format from SAP)
-    // cols: 0=empty,1=empty,2=Delivery,3=Ref.doc,4=Deliv.date,5=Ship-to,6=DC name,7=Material,8=Description,9=Batch,10=Qty,11=SU,12=Route,13=SLoc
-    if(p.length>=13){
-      rows.push({delivery:p[2],refDoc:p[3],delivDate:p[4],shipTo:p[5],dcName:p[6],material:p[7],description:p[8],batch:p[9],quantity:qty,route:p[12]||route,sloc:p[13]||''});
-    } else {
-      rows.push({delivery:'',refDoc:'',delivDate:'',shipTo:'',dcName:DC_MAP[route]?DC_MAP[route].name:'',material:'',description:'',batch:'',quantity:qty,route:route,sloc:''});
-    }
+    rows.push(extractRowFields(p,route,qty));
   }
   return {dcTotals,rows};
 }
@@ -629,11 +754,7 @@ function parseDORows(rowsArr){
     for(let j=0;j<p.length;j++){if(p[j]==='CAR'&&j>=1){const q=parseFloat(p[j-1].replace(/[\s,]/g,''));if(q>0&&q<100000)qty=q;}}
     if(!qty)continue;
     dcTotals[route]=(dcTotals[route]||0)+qty;
-    if(p.length>=13){
-      rows.push({delivery:p[2],refDoc:p[3],delivDate:p[4],shipTo:p[5],dcName:p[6],material:p[7],description:p[8],batch:p[9],quantity:qty,route:p[12]||route,sloc:p[13]||''});
-    } else {
-      rows.push({delivery:'',refDoc:'',delivDate:'',shipTo:'',dcName:DC_MAP[route]?DC_MAP[route].name:'',material:'',description:'',batch:'',quantity:qty,route:route,sloc:''});
-    }
+    rows.push(extractRowFields(p,route,qty));
   }
   return {dcTotals,rows};
 }
@@ -658,18 +779,26 @@ function showUploadPreview(result){
 }
 
 function saveTodayData(){
-  if(!pendingUploadData)return;
+  if(!pendingUploadData){alert('⚠️ ไม่พบข้อมูลไฟล์ที่จะบันทึก กรุณาอัปโหลดไฟล์ DO ใหม่อีกครั้งก่อนกดบันทึก');return;}
   const d=document.getElementById('upload-date').value;
   if(d)pendingUploadData.date=d;
-  localStorage.setItem('do_'+pendingUploadData.date,JSON.stringify(pendingUploadData));
-  saveToCloud(pendingUploadData);renderHistory();updateStoredCount();
-  pendingUploadData=null;resetUpload();updateBanner('ok');
-  alert(`✅ บันทึกข้อมูลวันที่ ${thaiDate(d)} เรียบร้อย!`);
+  const entry=pendingUploadData;
+  idbPut(entry).then(()=>{
+    DO_CACHE[entry.date]=entry;
+    saveToCloud(entry);renderHistory();updateStoredCount();
+    pendingUploadData=null;resetUpload();updateBanner('ok');
+    alert(`✅ บันทึกข้อมูลวันที่ ${thaiDate(d)} เรียบร้อย!`);
+  }).catch(err=>{
+    alert('❌ บันทึกไม่สำเร็จ: '+(err&&err.message?err.message:'เกิดข้อผิดพลาดไม่ทราบสาเหตุ')+'\n\nลองรีเฟรชหน้าแล้วลองใหม่อีกครั้งค่ะ');
+  });
 }
 function resetUpload(){document.getElementById('upload-preview').style.display='none';document.getElementById('file-input').value='';pendingUploadData=null;}
 
 // ======== LOCAL STORAGE ========
 function getStoredEntries(){
+  const arr=Object.values(DO_CACHE);
+  if(arr.length)return arr;
+  // สำรอง: เผื่อ IndexedDB ใช้งานไม่ได้ในเบราว์เซอร์นี้ ให้ลองอ่านจาก localStorage แบบเดิม
   const entries=[];
   for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('do_')){try{entries.push(JSON.parse(localStorage.getItem(k)));}catch(e){}}}
   return entries;
@@ -694,15 +823,21 @@ function renderHistory(){
   }).join('');
 }
 function viewEntry(date){
-  const data=JSON.parse(localStorage.getItem('do_'+date));if(!data)return;
+  const data=DO_CACHE[date]||JSON.parse(localStorage.getItem('do_'+date)||'null');if(!data)return;
   pendingUploadData=data;document.getElementById('upload-date').value=data.date||date;
   showUploadPreview(data);showTab('tab2');document.getElementById('upload-preview').scrollIntoView({behavior:'smooth'});
 }
-function deleteEntry(date){if(!confirm(`ลบข้อมูลวันที่ ${thaiDate(date)}?`))return;localStorage.removeItem('do_'+date);renderHistory();}
+function deleteEntry(date){
+  if(!confirm(`ลบข้อมูลวันที่ ${thaiDate(date)}?`))return;
+  idbDelete(date).then(()=>{delete DO_CACHE[date];localStorage.removeItem('do_'+date);renderHistory();});
+}
 function clearAllData(){
   if(!confirm('ลบข้อมูลทั้งหมด?'))return;
-  const keys=[];for(let i=0;i<localStorage.length;i++){if(localStorage.key(i).startsWith('do_'))keys.push(localStorage.key(i));}
-  keys.forEach(k=>localStorage.removeItem(k));renderHistory();
+  idbClearAll().then(()=>{
+    DO_CACHE={};
+    const keys=[];for(let i=0;i<localStorage.length;i++){if(localStorage.key(i).startsWith('do_'))keys.push(localStorage.key(i));}
+    keys.forEach(k=>localStorage.removeItem(k));renderHistory();
+  });
 }
 function backupData(){
   const entries=getStoredEntries();if(!entries.length){alert('ไม่มีข้อมูล');return;}
@@ -717,9 +852,15 @@ function restoreData(event){
   reader.onload=(e)=>{
     try{
       const backup=JSON.parse(e.target.result);if(!backup.data||!Array.isArray(backup.data)){alert('ไฟล์ไม่ถูกต้อง');return;}
-      let imported=0,skipped=0;
-      for(const entry of backup.data){if(!entry.date||!entry.dcTotals){skipped++;continue;}if(localStorage.getItem('do_'+entry.date)){skipped++;}else{localStorage.setItem('do_'+entry.date,JSON.stringify(entry));imported++;}}
-      alert(`✅ นำเข้าสำเร็จ\n✔ เพิ่มใหม่: ${imported} วัน\n⏭ ข้าม: ${skipped} วัน`);renderHistory();
+      let imported=0,skipped=0;const tasks=[];
+      for(const entry of backup.data){
+        if(!entry.date||!entry.dcTotals){skipped++;continue;}
+        if(DO_CACHE[entry.date]){skipped++;continue;}
+        tasks.push(idbPut(entry).then(()=>{DO_CACHE[entry.date]=entry;imported++;}));
+      }
+      Promise.all(tasks).then(()=>{
+        alert(`✅ นำเข้าสำเร็จ\n✔ เพิ่มใหม่: ${imported} วัน\n⏭ ข้าม: ${skipped} วัน`);renderHistory();
+      });
     }catch(err){alert('เกิดข้อผิดพลาด: '+err.message);}
     event.target.value='';
   };
@@ -807,8 +948,17 @@ function calculateCost(){
     for(const e of entries){for(const dc of DC_BASE){const qty=e.dcTotals[dc.route]||0;if(!qty)continue;html+=`<tr><td>${thaiDate(e.date)}</td><td class="td-route">${dc.route}</td><td class="td-dc">${dc.name}</td><td class="td-num">${qty.toLocaleString()}</td></tr>`;}}
     document.getElementById('daily-breakdown-body').innerHTML=html;
   }
+  const ps=document.getElementById('print-subtitle');
+  if(ps)ps.textContent=`ช่วงเวลา: ${periodLabel}${selRoute?' | Route '+selRoute:''} | ช่วงน้ำมัน ${range.label}`;
   document.getElementById('calc-result').style.display='block';
   document.getElementById('calc-empty').style.display='none';
+}
+function printCalcResult(){
+  if(!_lastCalcData){alert('กรุณากด คำนวณ ก่อน');return;}
+  const ts=document.getElementById('print-timestamp');
+  if(ts)ts.textContent=new Date().toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'});
+  showTab('tab3');
+  setTimeout(()=>window.print(),50);
 }
 function exportResult(){
   if(!_lastCalcData){alert('กรุณากด คำนวณ ก่อน');return;}
@@ -917,6 +1067,7 @@ function renderTab5(){
     <div class="summary-box green"><div class="val">${totalQty.toLocaleString()}</div><div class="lbl">ลังรวม</div></div>
     <div class="summary-box purple"><div class="val">${new Set(rows.map(r=>r.material)).size}</div><div class="lbl">ชนิดสินค้า</div></div>
     <div class="summary-box teal"><div class="val">${new Set(rows.map(r=>r.recordDate)).size}</div><div class="lbl">วันที่</div></div>`;
+  renderD5Check(from,to,selRoute);
   if(!rows.length){emp.style.display='block';document.getElementById('d5-body').innerHTML='';return;}
   emp.style.display='none';
   document.getElementById('d5-body').innerHTML=rows.map(r=>`<tr>
@@ -931,6 +1082,38 @@ function renderTab5(){
     <td class="td-num">${r.quantity.toLocaleString()}</td>
     <td class="td-route">${r.route}</td>
   </tr>`).join('');
+}
+// ตรวจสอบว่ายอดลังตาม "สรุป DO" (dcTotals) กับยอดลังที่รวมจาก "รายละเอียดสินค้า" (rows)
+// ตรงกันหรือไม่ในแต่ละวัน — ช่วยหาว่าวันไหนที่รายละเอียดสินค้าขาดหาย/ไม่ครบ
+function renderD5Check(from,to,selRoute){
+  const card=document.getElementById('d5-check-card');if(!card)return;
+  const entries=getStoredEntries().filter(e=>(!from||e.date>=from)&&(!to||e.date<=to));
+  const list=entries.map(e=>{
+    const dcSum=Object.entries(e.dcTotals||{}).reduce((s,[route,q])=>(!selRoute||route===selRoute)?s+q:s,0);
+    const rowsSum=(e.rows||[]).reduce((s,r)=>(!selRoute||r.route===selRoute)?s+(r.quantity||0):s,0);
+    return{date:e.date,dcSum,rowsSum,diff:dcSum-rowsSum,rowCount:(e.rows||[]).length};
+  }).filter(x=>x.dcSum>0||x.rowsSum>0);
+  const mismatched=list.filter(x=>x.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)||a.date.localeCompare(b.date));
+  if(!list.length){card.innerHTML='';return;}
+  if(!mismatched.length){
+    card.innerHTML=`<div class="card-header green">✅ ตรวจสอบข้อมูล</div><div class="card-body"><div class="notice notice-success" style="margin:0;">ยอดลังจาก "สรุป DO" กับ "รายละเอียดสินค้า" ตรงกันครบทุกวันในช่วงที่เลือก</div></div>`;
+    return;
+  }
+  const totalDiff=mismatched.reduce((s,x)=>s+x.diff,0);
+  card.innerHTML=`
+    <div class="card-header red">⚠️ ตรวจสอบข้อมูล — พบ ${mismatched.length} วัน ที่รายละเอียดสินค้าไม่ครบ (ขาดรวม ${totalDiff.toLocaleString()} ลัง)</div>
+    <div class="card-body" style="padding:0"><div class="tbl-wrap"><table>
+      <thead><tr>
+        <th style="text-align:left;background:#c05621;">วันที่</th>
+        <th style="background:#c05621;">ลังตามสรุป DO</th>
+        <th style="background:#c05621;">ลังตามรายละเอียดสินค้า</th>
+        <th style="background:#c05621;">ขาดไป</th>
+        <th style="background:#c05621;">รายการสินค้าที่มี</th>
+      </tr></thead>
+      <tbody>${mismatched.map(x=>`<tr><td class="td-date">${thaiDate(x.date)}</td><td class="td-num">${x.dcSum.toLocaleString()}</td><td class="td-num">${x.rowsSum.toLocaleString()}</td><td class="td-num" style="color:#c53030;font-weight:700;">${x.diff.toLocaleString()}</td><td class="td-num">${x.rowCount.toLocaleString()}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="notice notice-warn" style="margin:14px 20px;">💡 วันที่ในตารางนี้ยังไม่มีรายละเอียดสินค้ารายบรรทัดครบในเบราว์เซอร์นี้ (มักเกิดจากอัปโหลดไฟล์ DO จากเครื่อง/เบราว์เซอร์อื่น แล้ว sync มาแค่ยอดรวม) — วิธีแก้: อัปโหลดไฟล์ DO ของวันนั้นซ้ำในแท็บ "อัปโหลด DO" หรือกด "⬆️ อัปโหลดทั้งหมดขึ้น Cloud" จากเครื่องที่มีไฟล์ต้นฉบับครบ (ต้อง deploy Google Apps Script เวอร์ชันล่าสุดก่อน)</div>
+    </div>`;
 }
 function exportTab5(){
   const from=document.getElementById('d5-from').value,to=document.getElementById('d5-to').value;
@@ -977,14 +1160,16 @@ function renderTab6(){
     <div class="summary-box"><div class="val">${grandTotal.toLocaleString()}</div><div class="lbl">ลังรวม</div></div>
     <div class="summary-box green"><div class="val">${new Set(rows.map(r=>r.recordDate)).size}</div><div class="lbl">วันที่มีข้อมูล</div></div>
     <div class="summary-box purple"><div class="val">${new Set(rows.map(r=>r.route)).size}</div><div class="lbl">Route</div></div>`;
-  document.getElementById('d6-body').innerHTML=items.map(item=>`<tr>
+  document.getElementById('d6-body').innerHTML=items.map((item,idx)=>`<tr>
+    <td class="td-num" style="font-weight:700;color:#718096;">${idx+1}</td>
     <td class="td-num td-left">${item.material}</td>
     <td class="td-left" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.description}">${item.description}</td>
     <td class="td-num" style="font-weight:700;">${item.total.toLocaleString()}</td>
+    <td class="td-num">${grandTotal?(item.total/grandTotal*100).toFixed(1):'0.0'}%</td>
     <td class="td-num">${item.dates.size}</td>
     <td style="text-align:left;">${[...item.routes].sort().map(r=>`<span class="dc-pill">${r}</span>`).join('')}</td>
   </tr>`).join('');
-  document.getElementById('d6-foot').innerHTML=`<tr class="total-row"><td colspan="2" style="text-align:right;">รวมทั้งหมด</td><td>${grandTotal.toLocaleString()}</td><td></td><td></td></tr>`;
+  document.getElementById('d6-foot').innerHTML=`<tr class="total-row"><td colspan="3" style="text-align:right;">รวมทั้งหมด</td><td>${grandTotal.toLocaleString()}</td><td>100.0%</td><td></td><td></td></tr>`;
 }
 function exportTab6(){
   const from=document.getElementById('d6-from').value,to=document.getElementById('d6-to').value;
@@ -993,8 +1178,9 @@ function exportTab6(){
   const byMat={};
   rows.forEach(r=>{if(!byMat[r.material])byMat[r.material]={material:r.material,description:r.description,total:0,dates:new Set(),routes:new Set()};byMat[r.material].total+=r.quantity;byMat[r.material].dates.add(r.recordDate);byMat[r.material].routes.add(r.route);});
   const items=Object.values(byMat).sort((a,b)=>b.total-a.total);
-  let csv='Material,ชื่อสินค้า,รวม (CAR),จำนวนวัน,Route\n';
-  items.forEach(i=>{csv+=`${i.material},"${i.description}",${i.total},${i.dates.size},"${[...i.routes].sort().join(', ')}"\n`;});
+  const grandTotal=items.reduce((s,i)=>s+i.total,0);
+  let csv='ลำดับ,Material,ชื่อสินค้า,รวม (CAR),% ของยอดรวม,จำนวนวัน,Route\n';
+  items.forEach((i,idx)=>{csv+=`${idx+1},${i.material},"${i.description}",${i.total},${grandTotal?(i.total/grandTotal*100).toFixed(1):'0.0'}%,${i.dates.size},"${[...i.routes].sort().join(', ')}"\n`;});
   dl('﻿'+csv,`DC711_สรุปสินค้า_${from||'all'}_${to||'all'}.csv`,'text/csv;charset=utf-8');
 }
 
@@ -1041,8 +1227,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     w.innerHTML='⚠️ ไฟล์นี้เปิดจากโฟลเดอร์ชั่วคราว — ข้อมูลอาจหายได้ | แนะนำ: บันทึกไฟล์ไปไว้ที่ Desktop หรือ GitHub Pages &nbsp;<button onclick="document.getElementById(\'temp-warn\').remove()" style="background:#c53030;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;">ปิด</button>';
     document.body.insertBefore(w,document.body.firstChild);
   }
-  // Auto-open settings if no GAS URL
-  if(!GAS_URL){setTimeout(()=>{openSettings();document.getElementById('gas-test-result').innerHTML='<span style="color:#744210;">⚠️ กรุณาใส่ URL แล้วกด 📥 บันทึก URL ถาวรลงไฟล์</span>';},600);}
+  // หมายเหตุ: เดิมโค้ดตรงนี้จะเปิด modal ตั้งค่า Google Sheets ทับหน้าจอทั้งหมดทันทีที่เปิดไฟล์
+  // ถ้ายังไม่ได้ตั้งค่า GAS_URL — ทำให้พนักงานที่ไม่รู้จัก/ไม่เข้าใจ Google Apps Script
+  // เจอ popup ทับหน้าจอเต็มจอ กดอะไรไม่ได้ (ต้องกด "ยกเลิก" หรือคลิกนอกกล่องก่อน) จึงดูเหมือน
+  // "เข้าไปอัปโหลดไฟล์ไม่ได้" — เอา auto-popup ออก เหลือแค่แถบสถานะมุมขวาล่าง (#conn-banner)
+  // ที่ไม่บล็อกการใช้งาน พนักงานยังกด "⚙️ Google Sheets" เองได้ตลอดเวลาถ้าต้องการตั้งค่า
   // Init selects
   const now2=new Date();
   const m=String(now2.getMonth()+1).padStart(2,'0');
@@ -1053,8 +1242,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   const cr=document.getElementById('calc-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;cr.appendChild(o);});
   const d5r=document.getElementById('d5-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;d5r.appendChild(o);});
   const d6r=document.getElementById('d6-route');DC_BASE.forEach(dc=>{const o=document.createElement('option');o.value=dc.route;o.textContent=`${dc.route} — ${dc.name}`;d6r.appendChild(o);});
-  buildPriceTables();renderHistory();updateStoredCount();
-  if(GAS_URL)syncFromCloud();else updateBanner('nourl');
+  // โหลดข้อมูลจาก IndexedDB (โควตาใหญ่กว่า localStorage มาก พอสำหรับเก็บข้อมูลทั้งปี)
+  // และย้ายข้อมูลเก่าที่เคยอยู่ใน localStorage (do_...) มาไว้ที่นี่แบบอัตโนมัติครั้งเดียว
+  migrateLocalStorageToIDB().then(()=>reloadCache()).then(()=>{
+    buildPriceTables();renderHistory();updateStoredCount();
+    if(GAS_URL)syncFromCloud();else updateBanner('nourl');
+  }).catch(err=>{
+    console.error('IndexedDB ใช้งานไม่ได้ในเบราว์เซอร์นี้ ระบบจะใช้ localStorage แบบเดิมแทน (เก็บข้อมูลได้จำกัดกว่า)',err);
+    buildPriceTables();renderHistory();updateStoredCount();
+    if(GAS_URL)syncFromCloud();else updateBanner('nourl');
+  });
 });
 </script>
 </body>
