@@ -467,7 +467,7 @@ tr.subtotal-row td{background:#edf2f7;font-weight:700;color:#2d3748;}
 // กด "📥 บันทึก URL ถาวรลงไฟล์" เพื่อ download ไฟล์ใหม่
 // ที่มี URL ฝังไว้แล้ว — ไม่ต้องตั้งค่าใหม่ทุกครั้ง
 // ============================================================
-const DEFAULT_GAS_URL = '';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyytdT8gF7oQhSHKpn00aluYgZm_sWDzVVoKIUSEKlfCyStvCXLBBGGqy_TmckRU6Lx/exec';
 
 var GAS_URL = localStorage.getItem('dc711_gas_url') || DEFAULT_GAS_URL;
 if (DEFAULT_GAS_URL && !localStorage.getItem('dc711_gas_url')) {
@@ -588,14 +588,25 @@ function saveGASPermanent(){
   var u=document.getElementById('gas-url-input').value.trim();
   var el=document.getElementById('gas-test-result');
   if(!u){el.innerHTML='<span style="color:#c53030;">⚠️ กรุณาใส่ URL ก่อน</span>';return;}
-  fetch(window.location.href).then(r=>r.text()).then(html=>{
+  // เดิมใช้ fetch(window.location.href) เพื่ออ่าน HTML ของไฟล์ตัวเอง แล้วแก้ DEFAULT_GAS_URL
+  // แต่ถ้าเปิดไฟล์แบบ file:// (ดับเบิลคลิกเปิดตรงๆ ไม่ได้ผ่านเว็บเซิร์ฟเวอร์) เบราว์เซอร์ส่วนใหญ่
+  // (โดยเฉพาะ Chrome/Edge) จะบล็อก fetch ไปยัง file:// ด้วยเหตุผลด้านความปลอดภัย ทำให้ promise
+  // reject แล้วเข้า .catch() ซึ่งไม่ได้ดาวน์โหลดไฟล์ใหม่และไม่ขึ้น alert ใดๆ — ผู้ใช้จึงรู้สึกว่า
+  // "กดบันทึกไม่ได้" (กดแล้วไม่มีอะไรเกิดขึ้นเลย) แก้โดยอ่าน HTML ปัจจุบันจาก DOM ในหน่วยความจำ
+  // โดยตรง (document.documentElement.outerHTML) แทนการ fetch ไฟล์ตัวเอง — ใช้ได้ทั้ง file:// และ
+  // http(s):// เหมือนกัน ไม่พึ่งพา network/file access เลย
+  try{
+    var html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
     var updated=html.replace(/const DEFAULT_GAS_URL = '.*?';/,"const DEFAULT_GAS_URL = '"+u.replace(/'/g,"\\'")+"';");
     var blob=new Blob([updated],{type:'text/html;charset=utf-8'});
     var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dashboard-dc711-v5.html';a.click();URL.revokeObjectURL(a.href);
     GAS_URL=u;localStorage.setItem('dc711_gas_url',u);
     closeSettings();updateBanner('connecting');setTimeout(()=>syncFromCloud(),300);
     alert('✅ ดาวน์โหลดไฟล์ใหม่เรียบร้อย!\n\nใช้ไฟล์นี้แทนไฟล์เดิม — URL ถูกฝังถาวร');
-  }).catch(()=>{GAS_URL=u;localStorage.setItem('dc711_gas_url',u);closeSettings();updateBanner('connecting');if(u)syncFromCloud();});
+  }catch(err){
+    GAS_URL=u;localStorage.setItem('dc711_gas_url',u);closeSettings();updateBanner('connecting');if(u)syncFromCloud();
+    alert('⚠️ บันทึก URL ลงไฟล์ใหม่ไม่สำเร็จ (ตั้งค่าไว้ในเบราว์เซอร์นี้แล้ว): '+(err&&err.message?err.message:'unknown error'));
+  }
 }
 function testGAS(){
   var u=document.getElementById('gas-url-input').value.trim();
@@ -685,8 +696,27 @@ function processFile(file){
         result=parseDORows(XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
       }
       result.filename=file.name;
-      const fnMatch=file.name.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-      const detectedDate=fnMatch?`${fnMatch[3]}-${fnMatch[2]}-${fnMatch[1]}`:new Date().toISOString().slice(0,10);
+      // ชื่อไฟล์จาก SAP มักเป็นรูปแบบ DD.MM.YY โดย YY คือปี พ.ศ. แบบย่อ 2 หลัก (เช่น "07.03.69"
+      // = 7 มี.ค. 2569 = 7 มี.ค. 2026) — เดิม regex บังคับปีต้องมี 4 หลัก (\d{4}) จึงไม่ match
+      // กับไฟล์ปี 2 หลักแบบนี้ ทำให้ fnMatch เป็น null แล้วโค้ด fallback ไปใช้วันที่ปัจจุบันของ
+      // เครื่อง (new Date()) แทน — นี่คือสาเหตุที่ dashboard ขึ้นวันที่วันนี้ (system date) แทนที่
+      // จะเป็นวันที่จริงจากชื่อไฟล์ แก้โดยรองรับทั้งปี 2 หลัก (พ.ศ.) และ 4 หลัก (พ.ศ. หรือ ค.ศ.)
+      const fnMatch=file.name.match(/(\d{2})\.(\d{2})\.(\d{2}|\d{4})(?!\d)/);
+      let detectedDate;
+      if(fnMatch){
+        const dd=fnMatch[1],mm=fnMatch[2];const yyRaw=fnMatch[3];
+        let yearCE;
+        if(yyRaw.length===4){
+          const yNum=parseInt(yyRaw,10);
+          yearCE=yNum>2400?yNum-543:yNum;
+        }else{
+          const yBE=2500+parseInt(yyRaw,10);
+          yearCE=yBE-543;
+        }
+        detectedDate=`${yearCE}-${mm}-${dd}`;
+      }else{
+        detectedDate=new Date().toISOString().slice(0,10);
+      }
       document.getElementById('upload-date').value=detectedDate;
       result.date=detectedDate;pendingUploadData=result;showUploadPreview(result);
     }catch(err){alert('เกิดข้อผิดพลาด: '+err.message);}
@@ -1216,8 +1246,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     w.innerHTML='⚠️ ไฟล์นี้เปิดจากโฟลเดอร์ชั่วคราว — ข้อมูลอาจหายได้ | แนะนำ: บันทึกไฟล์ไปไว้ที่ Desktop หรือ GitHub Pages &nbsp;<button onclick="document.getElementById(\'temp-warn\').remove()" style="background:#c53030;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;">ปิด</button>';
     document.body.insertBefore(w,document.body.firstChild);
   }
-  // Auto-open settings if no GAS URL
-  if(!GAS_URL){setTimeout(()=>{openSettings();document.getElementById('gas-test-result').innerHTML='<span style="color:#744210;">⚠️ กรุณาใส่ URL แล้วกด 📥 บันทึก URL ถาวรลงไฟล์</span>';},600);}
+  // หมายเหตุ: เดิมโค้ดตรงนี้จะเปิด modal ตั้งค่า Google Sheets ทับหน้าจอทั้งหมดทันทีที่เปิดไฟล์
+  // ถ้ายังไม่ได้ตั้งค่า GAS_URL — ทำให้พนักงานที่ไม่รู้จัก/ไม่เข้าใจ Google Apps Script
+  // เจอ popup ทับหน้าจอเต็มจอ กดอะไรไม่ได้ (ต้องกด "ยกเลิก" หรือคลิกนอกกล่องก่อน) จึงดูเหมือน
+  // "เข้าไปอัปโหลดไฟล์ไม่ได้" — เอา auto-popup ออก เหลือแค่แถบสถานะมุมขวาล่าง (#conn-banner)
+  // ที่ไม่บล็อกการใช้งาน พนักงานยังกด "⚙️ Google Sheets" เองได้ตลอดเวลาถ้าต้องการตั้งค่า
   // Init selects
   const now2=new Date();
   const m=String(now2.getMonth()+1).padStart(2,'0');
