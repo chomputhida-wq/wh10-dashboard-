@@ -696,8 +696,27 @@ function processFile(file){
         result=parseDORows(XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
       }
       result.filename=file.name;
-      const fnMatch=file.name.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-      const detectedDate=fnMatch?`${fnMatch[3]}-${fnMatch[2]}-${fnMatch[1]}`:new Date().toISOString().slice(0,10);
+      // ชื่อไฟล์จาก SAP มักเป็นรูปแบบ DD.MM.YY โดย YY คือปี พ.ศ. แบบย่อ 2 หลัก (เช่น "07.03.69"
+      // = 7 มี.ค. 2569 = 7 มี.ค. 2026) — เดิม regex บังคับปีต้องมี 4 หลัก (\d{4}) จึงไม่ match
+      // กับไฟล์ปี 2 หลักแบบนี้ ทำให้ fnMatch เป็น null แล้วโค้ด fallback ไปใช้วันที่ปัจจุบันของ
+      // เครื่อง (new Date()) แทน — นี่คือสาเหตุที่ dashboard ขึ้นวันที่วันนี้ (system date) แทนที่
+      // จะเป็นวันที่จริงจากชื่อไฟล์ แก้โดยรองรับทั้งปี 2 หลัก (พ.ศ.) และ 4 หลัก (พ.ศ. หรือ ค.ศ.)
+      const fnMatch=file.name.match(/(\d{2})\.(\d{2})\.(\d{2}|\d{4})(?!\d)/);
+      let detectedDate;
+      if(fnMatch){
+        const dd=fnMatch[1],mm=fnMatch[2];const yyRaw=fnMatch[3];
+        let yearCE;
+        if(yyRaw.length===4){
+          const yNum=parseInt(yyRaw,10);
+          yearCE=yNum>2400?yNum-543:yNum;
+        }else{
+          const yBE=2500+parseInt(yyRaw,10);
+          yearCE=yBE-543;
+        }
+        detectedDate=`${yearCE}-${mm}-${dd}`;
+      }else{
+        detectedDate=new Date().toISOString().slice(0,10);
+      }
       document.getElementById('upload-date').value=detectedDate;
       result.date=detectedDate;pendingUploadData=result;showUploadPreview(result);
     }catch(err){alert('เกิดข้อผิดพลาด: '+err.message);}
