@@ -321,10 +321,21 @@ tr:hover td { background: #f7fafc; }
   </div>
 
   <!-- Classify Unclassified -->
-  <div class="card" id="classify-card" style="display:none">
-    <div class="card-header orange">⚠️ สินค้าที่ยังไม่ได้จัดกลุ่มลูกค้า</div>
-    <div class="card-body">
-      <div id="unclassified-list"></div>
+  <div class="card" id="unc-watch-sec" style="display:none">
+    <div class="card-header orange">⚠️ สินค้าใหม่ที่ยังไม่ได้จัดกลุ่มลูกค้า (7-Eleven / Makro) <span id="unc-watch-count" style="font-weight:400;font-size:13px;color:#744210;margin-left:4px"></span></div>
+    <div class="card-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="th-mat" style="background:#92400e">Material</th>
+              <th class="th-desc" style="background:#92400e">ชื่อสินค้า</th>
+              <th style="background:#92400e">จัดกลุ่มลูกค้า</th>
+            </tr>
+          </thead>
+          <tbody id="unc-watch-body"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -428,418 +439,14 @@ tr:hover td { background: #f7fafc; }
   </div>
 </div>
 
-<!-- ── SHEETS TOAST ── -->
-<div id="sheets-toast" style="display:none;position:fixed;bottom:56px;right:16px;background:#1e3a5f;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:320px"></div>
-
-<!-- ── CONNECTION BANNER ── -->
-<div id="conn-banner" class="nourl" onclick="openGasSettings()">⚙️ คลิกตั้งค่า Sheets</div>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WH10 สินค้า 7-Eleven & Makro เฝ้าระวัง</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f8; color: #1a202c; font-size: 14px; }
-
-/* ── Header ── */
-.header {
-  background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
-  color: white; padding: 14px 24px;
-  display: flex; align-items: center; gap: 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  flex-wrap: wrap;
-}
-.header-logo { font-size: 26px; }
-.header-title h1 { font-size: 19px; font-weight: 700; }
-.header-title p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
-.header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.header-date { font-size: 12px; opacity: 0.85; margin-right: 8px; }
-
-/* ── Tabs ── */
-.tabs { display: flex; background: #fff; border-bottom: 2px solid #e2e8f0; padding: 0 20px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-.tab-btn {
-  padding: 14px 20px; cursor: pointer; font-size: 14px; font-weight: 600;
-  border: none; background: none; color: #718096;
-  border-bottom: 3px solid transparent; margin-bottom: -2px;
-  transition: all 0.2s; display: flex; align-items: center; gap: 7px;
-}
-.tab-btn:hover { color: #2b6cb0; background: #ebf8ff; }
-.tab-btn.active { color: #2b6cb0; border-bottom-color: #2b6cb0; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-/* ── Content ── */
-.content { padding: 22px 24px; max-width: 1500px; margin: 0 auto; }
-
-/* ── Cards ── */
-.card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05); margin-bottom: 18px; overflow: hidden; }
-.card-header { padding: 13px 18px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 9px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-.card-header.blue   { background: #ebf8ff; color: #2c5282; border-left: 4px solid #3182ce; }
-.card-header.red    { background: #fff5f5; color: #742a2a; border-left: 4px solid #e53e3e; }
-.card-header.orange { background: #fffaf0; color: #744210; border-left: 4px solid #dd6b20; }
-.card-header.green  { background: #f0fff4; color: #276749; border-left: 4px solid #38a169; }
-.card-header.purple { background: #faf5ff; color: #553c9a; border-left: 4px solid #6b46c1; }
-.card-body { padding: 16px 18px; }
-
-/* ── KPI Summary ── */
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 18px; }
-.kpi-box { background: white; border-radius: 10px; padding: 16px 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-top: 3px solid #3182ce; }
-.kpi-box .val { font-size: 28px; font-weight: 800; color: #2c5282; line-height: 1.1; }
-.kpi-box .lbl { font-size: 11px; color: #718096; margin-top: 5px; }
-.kpi-box.yellow { border-color: #eab308; }
-.kpi-box.yellow .val { color: #854d0e; }
-.kpi-box.orange { border-color: #f97316; }
-.kpi-box.orange .val { color: #9a3412; }
-.kpi-box.red    { border-color: #ef4444; }
-.kpi-box.red    .val { color: #991b1b; }
-.kpi-box.dark   { border-color: #dc2626; background: #fef2f2; }
-.kpi-box.dark   .val { color: #7f1d1d; font-size: 22px; }
-
-/* ── Filter Bar ── */
-.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; padding: 12px 16px; background: #f7faff; border-radius: 10px; border: 1px solid #e2e8f0; }
-.filter-label { font-size: 12px; font-weight: 600; color: #4a5568; white-space: nowrap; }
-
-/* ── Buttons ── */
-.btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.18s; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
-.btn-primary  { background: #3182ce; color: white; }
-.btn-primary:hover { background: #2b6cb0; }
-.btn-success  { background: #38a169; color: white; }
-.btn-success:hover { background: #2f855a; }
-.btn-danger   { background: #e53e3e; color: white; }
-.btn-danger:hover  { background: #c53030; }
-.btn-purple   { background: #6b46c1; color: white; }
-.btn-purple:hover  { background: #553c9a; }
-.btn-amber    { background: #d97706; color: white; }
-.btn-amber:hover   { background: #b45309; }
-.btn-outline  { background: white; color: #3182ce; border: 1.5px solid #3182ce; }
-.btn-outline:hover { background: #ebf8ff; }
-.btn-ghost    { background: rgba(255,255,255,.15); color: white; border: 1.5px solid rgba(255,255,255,.4); }
-.btn-ghost:hover   { background: rgba(255,255,255,.25); }
-.btn-sm { padding: 5px 11px; font-size: 12px; }
-
-/* ── Age Filter Pills ── */
-.age-pill { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.18s; background: #f1f5f9; color: #475569; }
-.age-pill:hover { opacity: 0.85; }
-.age-pill.on { border-color: currentColor; }
-.age-pill.all.on  { background: #1e3a5f; color: white; }
-.age-pill.y46 { color: #854d0e; }
-.age-pill.y46.on  { background: #fef3c7; border-color: #eab308; }
-.age-pill.o61 { color: #9a3412; }
-.age-pill.o61.on  { background: #ffedd5; border-color: #f97316; }
-.age-pill.r90 { color: #991b1b; }
-.age-pill.r90.on  { background: #fee2e2; border-color: #ef4444; }
-.cust-pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; border: 2px solid #e2e8f0; background: white; color: #475569; transition: all 0.18s; }
-.cust-pill:hover { border-color: #90cdf4; }
-.cust-pill.on { background: #1e3a5f; color: white; border-color: #1e3a5f; }
-.cust-pill.seven.on { background: #2563eb; border-color: #2563eb; color: white; }
-.cust-pill.makro.on { background: #dc2626; border-color: #dc2626; color: white; }
-
-/* ── Date Selector ── */
-.date-select { padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: white; cursor: pointer; font-family: inherit; }
-.date-select:focus { outline: none; border-color: #3182ce; }
-
-/* ── Search ── */
-.search-box { padding: 7px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; width: 200px; }
-.search-box:focus { outline: none; border-color: #3182ce; }
-
-/* ── Table ── */
-.tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-th { background: #2c5282; color: white; padding: 9px 10px; text-align: center; font-weight: 600; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-th.th-mat  { background: #1a365d; text-align: left; }
-th.th-desc { background: #1a365d; text-align: left; }
-th.th-46   { background: #92400e; }
-th.th-61   { background: #7c2d12; }
-th.th-90   { background: #7f1d1d; }
-th.th-note { background: #1a365d; }
-td { padding: 8px 10px; text-align: center; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-tr:hover td { background: #f7fafc; }
-.mat-col  { font-weight: 700; color: #2c5282; text-align: left; font-size: 12px; }
-.desc-col { text-align: left; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.num  { text-align: right; font-weight: 700; }
-.ctr  { text-align: center; }
-.band-46 { background: #fffbeb; }
-.band-61 { background: #fff7ed; }
-.band-90 { background: #fef2f2; }
-.empty { text-align: center; color: #a0aec0; padding: 40px; font-size: 14px; }
-.reason-inp { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 11px; font-family: inherit; resize: none; min-height: 30px; transition: border 0.15s; }
-.reason-inp:focus { outline: none; border-color: #3182ce; }
-.reason-inp.saved { background: #f0fff4; border-color: #9ae6b4; }
-
-/* ── Chip ── */
-.chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-.chip-ok     { background: #dcfce7; color: #166534; }
-.chip-warn   { background: #fef9c3; color: #713f12; }
-.chip-danger { background: #fee2e2; color: #991b1b; }
-.chip-na     { background: #f1f5f9; color: #94a3b8; }
-
-/* ── Upload Zone ── */
-.upload-zone { border: 2px dashed #90cdf4; border-radius: 12px; padding: 36px 20px; text-align: center; cursor: pointer; background: #f7faff; transition: all 0.2s; }
-.upload-zone:hover { border-color: #3182ce; background: #ebf8ff; }
-.upload-icon  { font-size: 44px; margin-bottom: 10px; }
-.upload-title { font-size: 16px; font-weight: 700; color: #2c5282; margin-bottom: 5px; }
-.upload-sub   { color: #718096; font-size: 13px; }
-.progress-bar { display: none; height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 12px; overflow: hidden; }
-.progress-fill { height: 100%; background: #3182ce; border-radius: 2px; animation: prog 1s ease-in-out infinite alternate; }
-@keyframes prog { from { width: 20%; } to { width: 90%; } }
-
-/* ── Notice ── */
-.notice { padding: 11px 15px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
-.notice-info    { background: #ebf8ff; color: #2c5282; border: 1px solid #90cdf4; }
-.notice-success { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
-.notice-warn    { background: #fffaf0; color: #744210; border: 1px solid #fbd38d; }
-
-/* ── Modal ── */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: white; border-radius: 16px; padding: 28px 32px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-.modal-box h3 { font-size: 17px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
-.modal-box p  { font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.6; }
-.modal-box input[type="text"] { width: 100%; padding: 10px 13px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; margin-bottom: 12px; }
-.modal-box input[type="text"]:focus { outline: none; border-color: #3182ce; }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
-.modal-hint { font-size: 12px; color: #94a3b8; margin-bottom: 14px; }
-#gas-test-result { display: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
-
-/* ── Connection Banner ── */
-#conn-banner { position: fixed; bottom: 16px; right: 16px; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.3s; cursor: pointer; }
-#conn-banner.ok         { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
-#conn-banner.error      { background: #fff5f5; color: #c53030; border: 1px solid #fc8181; }
-#conn-banner.nourl      { background: #fffaf0; color: #744210; border: 1px solid #fbd38d; }
-#conn-banner.connecting { background: #ebf8ff; color: #2b6cb0; border: 1px solid #90cdf4; }
-
-/* ── History ── */
-.history-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; background: white; transition: all 0.2s; }
-.history-item:hover { border-color: #90cdf4; background: #f7faff; }
-.history-date { font-weight: 700; color: #2c5282; min-width: 110px; }
-.history-info { flex: 1; font-size: 13px; color: #718096; }
-.history-actions { display: flex; gap: 6px; }
-
-/* ── Old90 table extras ── */
-.pct-ok   { color: #16a34a; font-weight: 700; }
-.pct-med  { color: #d97706; font-weight: 700; }
-.pct-high { color: #dc2626; font-weight: 700; }
-
-/* ── Classify panel ── */
-.classify-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; background: white; font-size: 13px; }
-.classify-item select { padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
-
-@media (max-width: 768px) {
-  .content { padding: 12px; }
-  .header-title h1 { font-size: 15px; }
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .search-box { width: 140px; }
-}
-
-/* ── Band column visibility ── */
-#watch-table.show-46 th.th-61, #watch-table.show-46 th.th-90,
-#watch-table.show-46 td.band-61, #watch-table.show-46 td.band-90 { display: none; }
-#watch-table.show-61 th.th-46, #watch-table.show-61 th.th-90,
-#watch-table.show-61 td.band-46, #watch-table.show-61 td.band-90 { display: none; }
-#watch-table.show-90 th.th-46, #watch-table.show-90 th.th-61,
-#watch-table.show-90 td.band-46, #watch-table.show-90 td.band-61 { display: none; }
-
-@media print {
-  .header, .tabs, .filter-bar, .btn, .age-pill, .cust-pill, #conn-banner { display: none !important; }
-  .tab-panel { display: block !important; }
-}
-</style>
-</head>
-<body>
-
-<!-- ── HEADER ── -->
-<div class="header">
-  <div class="header-logo">🏭</div>
-  <div class="header-title">
-    <h1>WH10 สินค้า 7-Eleven &amp; Makro เฝ้าระวัง</h1>
-    <p>สินค้าอาจเกินเกณฑ์การส่ง | คลัง WH10</p>
-  </div>
-  <div class="header-actions">
-    <span class="header-date">📅 ข้อมูล: <strong id="cur-date">–</strong></span>
-    <select id="date-sel" class="date-select" onchange="switchDate(this.value)"></select>
-    <button class="btn btn-purple" onclick="saveWatchHTML()">💾 บันทึกลง HTML</button>
-    <button class="btn btn-ghost" onclick="openGasSettings()">⚙️ Sheets</button>
-  </div>
-</div>
-
-<!-- ── TABS ── -->
-<div class="tabs">
-  <button class="tab-btn active" id="btn-tab-watch" onclick="showTab('tab-watch',this)">📋 สินค้าเฝ้าระวัง</button>
-  <button class="tab-btn" id="btn-tab-old90" onclick="showTab('tab-old90',this)">🔴 WH10 &gt;90 วัน (ทั้งหมด)</button>
-  <button class="tab-btn" id="btn-tab-history" onclick="showTab('tab-history',this)">📂 ประวัติ</button>
-</div>
-
-<!-- ── CONTENT ── -->
-<div class="content">
-
-<!-- TAB: WATCH -->
-<div class="tab-panel active" id="tab-watch">
-  <!-- KPI -->
-  <div class="kpi-grid">
-    <div class="kpi-box"><div class="val" id="kpi-sku">–</div><div class="lbl">SKU เฝ้าระวัง</div></div>
-    <div class="kpi-box yellow"><div class="val" id="kpi-46">–</div><div class="lbl">🟡 ลัง Batch 46–60 วัน</div></div>
-    <div class="kpi-box orange"><div class="val" id="kpi-61">–</div><div class="lbl">🟠 ลัง Batch 61–90 วัน</div></div>
-    <div class="kpi-box red"><div class="val" id="kpi-90">–</div><div class="lbl">🔴 ลัง Batch &gt;90 วัน (เฝ้าระวัง)</div></div>
-    <div class="kpi-box dark"><div class="val" id="kpi-old90">226,663</div><div class="lbl">🚫 สต็อก WH10 &gt;90 วัน · 117 SKU</div></div>
-  </div>
-
-  <!-- Main Card -->
-  <div class="card">
-    <div class="card-header blue">
-      📋 รายการสินค้า 7-Eleven เฝ้าระวัง (อาจเกินเกณฑ์การส่ง)
-      <span id="watch-date-badge" style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-left:4px">–</span>
-      <span id="watch-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:4px"></span>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input class="search-box" type="text" placeholder="🔍 ค้นหาสินค้า..." oninput="filterWatch(this.value)">
-        <button class="btn btn-amber btn-sm" onclick="exportWatchExcel()">⬇ Export Excel</button>
-        <button class="btn btn-danger btn-sm" onclick="exportWatchPDF()">📄 PDF</button>
-        <button class="btn btn-success btn-sm" onclick="document.getElementById('watch-file-input').click()">⬆ นำเข้าข้อมูล</button>
-        <input type="file" id="watch-file-input" accept=".xls,.xlsx" style="display:none" onchange="uploadWatch(this)">
-      </div>
-    </div>
-    <div class="card-body">
-      <!-- Age Filter -->
-      <div class="filter-bar">
-        <span class="filter-label">กรองตามอายุ Batch:</span>
-        <button class="age-pill all on" id="af-all" onclick="setAgeFilter('all',this)">📋 ทั้งหมด</button>
-        <button class="age-pill y46" id="af-46" onclick="setAgeFilter('46',this)">🟡 46–60 วัน <span id="cnt-46" style="background:#fef3c7;padding:1px 6px;border-radius:8px;font-size:11px;margin-left:2px">–</span></button>
-        <button class="age-pill o61" id="af-61" onclick="setAgeFilter('61',this)">🟠 61–90 วัน <span id="cnt-61" style="background:#ffedd5;padding:1px 6px;border-radius:8px;font-size:11px;margin-left:2px">–</span></button>
-        <button class="age-pill r90" id="af-90" onclick="setAgeFilter('90',this)">🔴 &gt;90 วัน <span id="cnt-90" style="background:#fee2e2;padding:1px 6px;border-radius:8px;font-size:11px;margin-left:2px">–</span></button>
-        <span class="filter-label" style="margin-left:16px">ลูกค้า:</span>
-        <button class="cust-pill on" id="cf-all" onclick="setCustFilter('all',this)">👥 ทั้งหมด</button>
-        <button class="cust-pill seven" id="cf-7e" onclick="setCustFilter('7-Eleven',this)">🏪 7-Eleven</button>
-        <button class="cust-pill makro" id="cf-mk" onclick="setCustFilter('Makro',this)">🏬 Makro</button>
-      </div>
-      <!-- Table -->
-      <div class="tbl-wrap">
-        <table id="watch-table">
-          <thead>
-            <tr>
-              <th class="th-mat" rowspan="2">Material</th>
-              <th class="th-desc" rowspan="2">ชื่อสินค้า</th>
-              <th class="th-46" colspan="5">🟡 Batch อายุ 46–60 วัน</th>
-              <th class="th-61" colspan="5">🟠 Batch อายุ 61–90 วัน</th>
-              <th class="th-90" colspan="5">🔴 Batch อายุ &gt;90 วัน</th>
-              <th class="th-note" rowspan="2">✏️ หมายเหตุ</th>
-            </tr>
-            <tr>
-              <th class="th-46">Batch No.</th><th class="th-46">ลัง</th><th class="th-46">วันหมดอายุ</th><th class="th-46" id="hdr-age711-46">อายุส่ง7-11/วัน</th><th class="th-46">เหลืออายุ/วัน</th>
-              <th class="th-61">Batch No.</th><th class="th-61">ลัง</th><th class="th-61">วันหมดอายุ</th><th class="th-61" id="hdr-age711-61">อายุส่ง7-11/วัน</th><th class="th-61">เหลืออายุ/วัน</th>
-              <th class="th-90">Batch No.</th><th class="th-90">ลัง</th><th class="th-90">วันหมดอายุ</th><th class="th-90" id="hdr-age711-90">อายุส่ง7-11/วัน</th><th class="th-90">เหลืออายุ/วัน</th>
-            </tr>
-          </thead>
-          <tbody id="watch-body"><tr><td colspan="18" class="empty" id="wb-default">⏳ JS ยังไม่ทำงาน...</td></tr></tbody>
-        </table>
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:#94a3b8">เหลืออายุ: <span style="color:#16a34a;font-weight:700">■</span> &gt;14วัน &nbsp;<span style="color:#d97706;font-weight:700">■</span> 7–14วัน &nbsp;<span style="color:#dc2626;font-weight:700">■</span> &lt;7วัน</div>
-    </div>
-  </div>
-
-  <!-- Classify Unclassified -->
-  <div class="card" id="classify-card" style="display:none">
-    <div class="card-header orange">⚠️ สินค้าที่ยังไม่ได้จัดกลุ่มลูกค้า</div>
-    <div class="card-body">
-      <div id="unclassified-list"></div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB: OLD90 -->
-<div class="tab-panel" id="tab-old90">
-  <div class="card">
-    <div class="card-header red">
-      🚫 สต็อก WH10 &gt;90 วัน (ทั้งหมด)
-      <span id="old90-date-badge" style="background:#fee2e2;color:#991b1b;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;margin-left:4px">–</span>
-      <span id="old90-count" style="font-weight:400;font-size:13px;color:#64748b;margin-left:4px"></span>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-        <input class="search-box" type="text" placeholder="🔍 ค้นหา..." oninput="filterOld(this.value)">
-        <button class="btn btn-amber btn-sm" onclick="exportOld90Excel()">⬇ Export Excel</button>
-      </div>
-    </div>
-    <div class="card-body" style="padding:0">
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align:left">Material</th>
-              <th style="text-align:left">ชื่อสินค้า</th>
-              <th>กลุ่ม</th>
-              <th>Batch No.</th>
-              <th>ลัง (&gt;90)</th>
-              <th>วันหมดอายุ</th>
-              <th>ราคา/ลัง</th>
-              <th style="background:#1e40af">อายุส่ง7-11/วัน</th>
-              <th style="background:#854d0e">เหลืออายุ/วัน</th>
-              <th>ใช้ไป/วัน</th>
-              <th>เหลือ (วัน)</th>
-              <th>%SL ใช้ไป</th>
-            </tr>
-          </thead>
-          <tbody id="old-body"><tr><td colspan="12" class="empty">⏳ กำลังโหลด...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB: HISTORY -->
-<div class="tab-panel" id="tab-history">
-  <div class="card">
-    <div class="card-header purple">📂 ประวัติการนำเข้าข้อมูล</div>
-    <div class="card-body">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-        <select id="hist-date-sel" onchange="histSetDate(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-          <option value="">📅 ทุกวันที่</option>
-        </select>
-        <select id="hist-type-sel" onchange="histSetType(this.value)" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-          <option value="">📋 ทุกประเภท</option>
-          <option value="46-60">🟡 46-60 วัน</option>
-          <option value="61-90">🟠 61-90 วัน</option>
-          <option value=">90">🔴 &gt;90 วัน</option>
-        </select>
-        <input id="hist-search" type="text" placeholder="🔍 ค้นหา MAT / ชื่อสินค้า..." oninput="buildHistory()" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;flex:1;min-width:150px">
-        <button onclick="exportHistoryExcel()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">📥 Export Excel</button>
-      </div>
-      <div id="hist-summary" style="font-size:12px;color:#64748b;margin-bottom:8px"></div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:#1e3a5f;color:#fff">
-              <th style="padding:8px 6px;text-align:center;white-space:nowrap">วันที่นำเข้า</th>
-              <th style="padding:8px 6px;text-align:center">ประเภท</th>
-              <th style="padding:8px 6px;text-align:left">MAT</th>
-              <th style="padding:8px 6px;text-align:left">ชื่อสินค้า</th>
-              <th style="padding:8px 6px;text-align:center">Batch</th>
-              <th style="padding:8px 6px;text-align:center">เลขที่ Batch</th>
-              <th style="padding:8px 6px;text-align:right">ลัง</th>
-              <th style="padding:8px 6px;text-align:center">หมดอายุ</th>
-              <th style="padding:8px 6px;text-align:right">รับล่าสุด</th>
-              <th style="padding:8px 6px;text-align:center">อายุ7-11</th>
-              <th style="padding:8px 6px;text-align:center">เหลือ</th>
-            </tr>
-          </thead>
-          <tbody id="hist-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-</div><!-- /content -->
-
-<!-- ── GOOGLE SHEETS MODAL ── -->
-<div class="modal-overlay" id="gas-modal">
-  <div class="modal-box">
-    <h3>⚙️ ตั้งค่า Google Sheets</h3>
-    <p>วาง Apps Script Web App URL ที่ได้จากการ Deploy<br>ทำครั้งเดียว — พนักงาน upload แล้ว Thida เห็นข้อมูลเลยค่ะ</p>
-    <input id="gas-url-input" type="text" placeholder="https://script.google.com/macros/s/.../exec">
-    <div class="modal-hint">📋 วางข้อมูล Deploy URL จาก Google Apps Script</div>
-    <div id="gas-test-result"></div>
+<!-- ── UNCLASSIFIED PRODUCT POPUP ── -->
+<div class="modal-overlay" id="unc-watch-modal">
+  <div class="modal-box" style="width:640px">
+    <h3>⚠️ พบสินค้าใหม่ที่ยังไม่ได้จัดกลุ่มลูกค้า</h3>
+    <p>กรุณาเลือกว่าสินค้าแต่ละรายการเป็นของ 7-Eleven หรือ Makro <span id="unc-watch-modal-count" style="display:block;color:#dd6b20;font-weight:700;margin-top:4px"></span></p>
+    <div id="unc-watch-modal-body" style="max-height:400px;overflow-y:auto;margin-bottom:14px"></div>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeGasModal()">ยกเลิก</button>
-      <button class="btn btn-primary" onclick="testGasUrl()">🔍 ทดสอบ</button>
-      <button class="btn btn-success" onclick="saveGasUrl()">💾 บันทึก</button>
+      <button class="btn btn-outline" onclick="closeUncWatchModal()">ปิด (จัดกลุ่มทีหลัง)</button>
     </div>
   </div>
 </div>
@@ -1065,7 +672,10 @@ function buildWatch(){
         ?'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:700;background:#dbeafe;color:#1e40af;margin-left:4px">7-11</span>'
         :_effCust.includes('Makro')
         ?'<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:.65rem;font-weight:700;background:#fee2e2;color:#991b1b;margin-left:4px">Makro</span>'
-        :'';
+        :`<span style="display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle">
+            <button onclick="event.stopPropagation();classifyWatchMat('${r.mat}','สินค้า 7-Eleven',this)" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:.65rem;font-weight:700;cursor:pointer">🏪 7-Eleven</button>
+            <button onclick="event.stopPropagation();classifyWatchMat('${r.mat}','สินค้า Makro',this)" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:.65rem;font-weight:700;cursor:pointer">🏬 Makro</button>
+          </span>`;
     const REASONS=loadReasons();
     return Array.from({length:maxR},function(_,ri){
       const isF=ri===0;
@@ -1192,7 +802,7 @@ function sumBand(rows,band){
 // ── CUSTOM CUSTOMER CLASSIFICATION (localStorage) ──
 const LS_WCLS = 'wh_watch_cust_cls_v1';
 // Default classification embedded in file — employees see correct groups without needing localStorage
-const DEFAULT_CUST_CLS = {"DAJS0006506036AA":"สินค้า 7-Eleven","DABT0006506036AA":"สินค้า 7-Eleven","DSPC1004006048AA":"สินค้า 7-Eleven","300262":"สินค้า 7-Eleven","DACC0007503036AA":"สินค้า Makro","DASH0020003024AA":"สินค้า Makro","DABQ0020003024AA":"สินค้า Makro","DACK0020003024AA":"สินค้า Makro","DASG0009503036AA":"สินค้า Makro","DACC0001712144AA":"สินค้า Makro","DAJS0006506036GW":"สินค้า 7-Eleven","DBKS0003006048AA":"สินค้า 7-Eleven","DSPC4004006048AA":"สินค้า 7-Eleven","300261":"สินค้า 7-Eleven","DBSC2040000006BD":"สินค้า 7-Eleven","DATY0007506036AA":"สินค้า 7-Eleven","DASB0008503036AA":"สินค้า Makro","DASP0001812144AA":"สินค้า Makro","DBHM0002806048AA":"สินค้า 7-Eleven","DBSA0002806048BN":"สินค้า Makro","DBAF0002706048AA":"สินค้า 7-Eleven","DBMN1008506024AA":"สินค้า 7-Eleven","DSPC2004006048AA":"สินค้า 7-Eleven","DBWY0003006048BN":"สินค้า Makro","DNSI0003206048AA":"สินค้า 7-Eleven","DNAE0003506048AA":"สินค้า 7-Eleven","DACC1050000012AA":"สินค้า 7-Eleven","DQCO1002212072AA":"สินค้า 7-Eleven","DBWL0015006024AA":"สินค้า 7-Eleven","DBHM0015006024AA":"สินค้า 7-Eleven"};
+const DEFAULT_CUST_CLS = {"DAJS0006506036AA":"สินค้า 7-Eleven","DABT0006506036AA":"สินค้า 7-Eleven","DSPC1004006048AA":"สินค้า 7-Eleven","300262":"สินค้า 7-Eleven","DACC0007503036AA":"สินค้า Makro","DASH0020003024AA":"สินค้า Makro","DABQ0020003024AA":"สินค้า Makro","DACK0020003024AA":"สินค้า Makro","DASG0009503036AA":"สินค้า Makro","DACC0001712144AA":"สินค้า Makro","DAJS0006506036GW":"สินค้า 7-Eleven","DBKS0003006048AA":"สินค้า 7-Eleven","DSPC4004006048AA":"สินค้า 7-Eleven","300261":"สินค้า 7-Eleven","DBSC2040000006BD":"สินค้า 7-Eleven","DATY0007506036AA":"สินค้า 7-Eleven","DASB0008503036AA":"สินค้า Makro","DASP0001812144AA":"สินค้า Makro","DBHM0002806048AA":"สินค้า 7-Eleven","DBSA0002806048BN":"สินค้า Makro","DBAF0002706048AA":"สินค้า 7-Eleven","DBMN1008506024AA":"สินค้า 7-Eleven","DSPC2004006048AA":"สินค้า 7-Eleven","DBWY0003006048BN":"สินค้า Makro","DNSI0003206048AA":"สินค้า 7-Eleven","DNAE0003506048AA":"สินค้า 7-Eleven","DACC1050000012AA":"สินค้า 7-Eleven","DQCO1002212072AA":"สินค้า 7-Eleven","DBWL0015006024AA":"สินค้า 7-Eleven","DBHM0015006024AA":"สินค้า 7-Eleven","DACC0003506072AA":"สินค้า Makro","DACF0007503036AA":"สินค้า Makro","DAFA0002806048AA":"สินค้า Makro","DASP0003806072AA":"สินค้า Makro"};
 function loadWatchCustCls(){ if(window._WSAVE&&window._WSAVE.cls) return window._WSAVE.cls; try{ var saved=JSON.parse(localStorage.getItem(LS_WCLS)||'{}'); return Object.assign({}, saved, DEFAULT_CUST_CLS); }catch(e){ return Object.assign({}, DEFAULT_CUST_CLS); } }
 function saveWatchCustCls(obj){ localStorage.setItem(LS_WCLS, JSON.stringify(obj)); }
 
@@ -1220,20 +830,40 @@ function buildUnclassifiedWatch(){
   var unc = rows.filter(function(r){ return !r.customer; });
   window._unchWatchMats = unc.map(function(r){ return r.mat; });
   var sec = document.getElementById('unc-watch-sec');
-  if(!sec) return;
   var cnt = document.getElementById('unc-watch-count');
   if(cnt) cnt.textContent = unc.length + ' รายการ';
-  var tbody = document.getElementById('unc-watch-body');
-  if(!tbody) return;
-  if(!unc.length){ sec.style.display='none'; return; }
-  sec.style.display='block';
-  tbody.innerHTML = unc.map(function(r,i){
+  var rowsHtml = unc.map(function(r,i){
     var bg = i%2===0?'':'#fafafa';
     var idx = String(i);
     var b711 = '<button onclick="classifyWatchMat(_unchWatchMats['+idx+'],\'' + 'สินค้า 7-Eleven' + '\',this)" style="background:#2563eb;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;margin-right:4px">🏪 7-Eleven</button>';
     var bmk  = '<button onclick="classifyWatchMat(_unchWatchMats['+idx+'],\'' + 'สินค้า Makro' + '\',this)" style="background:#dc2626;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer">🏬 Makro</button>';
     return '<tr style="background:'+bg+'">' + '<td style="padding:7px 12px;font-family:monospace;font-size:.78rem;color:#374151">'+r.mat+'</td>' + '<td style="padding:7px 12px;color:#374151">'+r.desc+'</td>' + '<td style="padding:7px 12px;text-align:center">'+b711+bmk+'</td>' + '</tr>';
   }).join('');
+  var tbody = document.getElementById('unc-watch-body');
+  if(tbody) tbody.innerHTML = rowsHtml;
+  if(sec) sec.style.display = unc.length ? 'block' : 'none';
+  var mbody = document.getElementById('unc-watch-modal-body');
+  if(mbody){
+    mbody.innerHTML = unc.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th class="th-mat">Material</th><th class="th-desc">ชื่อสินค้า</th><th>จัดกลุ่มลูกค้า</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
+      : '<p style="color:#94a3b8;text-align:center;padding:24px 0">🎉 จัดกลุ่มครบทุกรายการแล้วค่ะ</p>';
+  }
+  var mcnt = document.getElementById('unc-watch-modal-count');
+  if(mcnt) mcnt.textContent = unc.length ? ('พบ '+unc.length+' รายการที่ยังไม่ได้จัดกลุ่ม') : '';
+  if(!unc.length) closeUncWatchModal();
+}
+
+function openUncWatchModal(){
+  var modal = document.getElementById('unc-watch-modal');
+  if(modal) modal.classList.add('open');
+}
+function closeUncWatchModal(){
+  var modal = document.getElementById('unc-watch-modal');
+  if(modal) modal.classList.remove('open');
+}
+function notifyUnclassifiedWatch(){
+  buildUnclassifiedWatch();
+  if(window._unchWatchMats && window._unchWatchMats.length) openUncWatchModal();
 }
 
 function saveOld90(){localStorage.setItem(LS_OLD90,JSON.stringify({data:OLD90_LIVE,date:old90Date}));}
@@ -1512,7 +1142,7 @@ function uploadWatch(input){
         const si2=document.getElementById('watch-search'); if(si2) si2.value='';
         applyWatchCustCls();
         buildWatch();
-        buildUnclassifiedWatch();
+        notifyUnclassifiedWatch();
         setTimeout(function(){ try{ saveWatchHTML(); }catch(e){} }, 2000);
       }
       if(old90Parsed.length){
@@ -1573,7 +1203,7 @@ function uploadWatch(input){
       const si=document.getElementById('watch-search'); if(si) si.value='';
       applyWatchCustCls();
       buildWatch();
-      buildUnclassifiedWatch();
+      notifyUnclassifiedWatch();
       setTimeout(function(){ try{ saveWatchHTML(); }catch(e){} }, 2000);
       alert('✅ นำเข้าข้อมูลเรียบร้อยค่ะ!\n'+WATCH_LIVE.length+' รายการ | วันที่: '+latest);
     }catch(err){alert('เกิดข้อผิดพลาด: '+err.message+' \n'+err.stack);}
@@ -1665,28 +1295,37 @@ function exportWatchExcel(){
     if(ageFilter==='46') filt=filt.filter(r=>normB(r.b46).some(b=>b.lang>0));
     else if(ageFilter==='61') filt=filt.filter(r=>normB(r.b61).some(b=>b.lang>0));
     else if(ageFilter==='90') filt=filt.filter(r=>normB(r.b90).some(b=>b.lang>0));
-    if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||'').includes('7-Eleven'));
-    else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||'').includes('Makro'));
+    if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'').includes('7-Eleven'));
+    else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'').includes('Makro'));
     const dateStr=curDate||watchDate;
+    const filterLabel=[
+      ageFilter!=='all'?({46:'🟡 46-60 วัน',61:'🟠 61-90 วัน',90:'🔴 >90 วัน'}[ageFilter]||''):'',
+      custFilter!=='all'?({'7-Eleven':'🏪 7-Eleven','Makro':'🏬 Makro'}[custFilter]||''):'',
+    ].filter(Boolean).join(' · ')||'ทั้งหมด';
+    const show46=ageFilter==='46'||ageFilter==='all';
+    const show61=ageFilter==='61'||ageFilter==='all';
+    const show90=ageFilter==='90'||ageFilter==='all';
     const totalLang46=sumBand(filt,'b46'),totalLang61=sumBand(filt,'b61'),totalLang90=sumBand(filt,'b90');
     function bcells(b,color){
-      if(!b||(!b.batch&&!b.lang)) return '<td colspan="4" style="text-align:center;color:#aaa;border:1px solid #ddd;background:#fafafa">–</td>';
-      const rv=b.remain!=null?b.remain:null;
-      const rc=rv===null?'#777':rv<0?'#dc2626':rv<7?'#dc2626':rv<14?'#d97706':'#065f46';
-      const rb=rv!==null&&rv<14?'font-weight:700':'';
+      if(!b||(!b.batch&&!b.lang)) return '<td colspan="5" style="text-align:center;color:#aaa;border:1px solid #ddd;background:#fafafa">–</td>';
+      const เหลือ=b.เหลือ!==null&&b.เหลือ!==undefined?b.เหลือ:(b.remain!==null&&b.remain!==undefined?b.remain:null);
+      const rc=เหลือ===null?'#777':เหลือ<0?'#dc2626':เหลือ<7?'#dc2626':เหลือ<14?'#d97706':'#065f46';
+      const rb=เหลือ!==null&&เหลือ<14?'font-weight:700':'';
       return '<td style="border:1px solid #ddd;padding:4px 6px;font-size:10px">'+(b.batch||'–')+'</td>'+
              '<td style="border:1px solid #ddd;padding:4px 6px;text-align:right;font-weight:700;color:'+color+'">'+(b.lang!=null?Number(b.lang).toLocaleString():'–')+'</td>'+
              '<td style="border:1px solid #ddd;padding:4px 6px;font-size:10px;text-align:center">'+(b.exp||'–')+'</td>'+
-             '<td style="border:1px solid #ddd;padding:4px 6px;text-align:center;color:'+rc+';'+rb+'">'+(rv!=null?rv+' วัน':'–')+'</td>';
+             '<td style="border:1px solid #ddd;padding:4px 6px;text-align:center">'+(b.age711!=null?b.age711:'–')+'</td>'+
+             '<td style="border:1px solid #ddd;padding:4px 6px;text-align:center;color:'+rc+';'+rb+'">'+(เหลือ!=null?เหลือ+' วัน':'–')+'</td>';
     }
     var bodyRows='';
     filt.forEach(function(r,i){
       const bg=i%2===0?'#ffffff':'#f8fafc';
-      const custLabel=r.customer&&r.customer.includes('7-Eleven')?'7-11':r.customer&&r.customer.includes('Makro')?'Makro':'';
+      const _effCustX=(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'');
+      const custLabel=_effCustX.includes('7-Eleven')?'7-11':_effCustX.includes('Makro')?'Makro':'';
       const custBadge=custLabel?'<span style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700;background:'+(custLabel==='7-11'?'#dbeafe;color:#1e40af':'#fee2e2;color:#991b1b')+'">'+custLabel+'</span>':'';
       const reason=REASONS[r.mat]||'';
       const b46s=normB(r.b46),b61s=normB(r.b61),b90s=normB(r.b90);
-      const maxR=Math.max(1,b46s.length,b61s.length,b90s.length);
+      const maxR=Math.max(1,show46?b46s.length:0,show61?b61s.length:0,show90?b90s.length:0);
       for(var ri=0;ri<maxR;ri++){
         const isF=ri===0;
         const b46=b46s[ri]||null,b61=b61s[ri]||null,b90=b90s[ri]||null;
@@ -1695,40 +1334,52 @@ function exportWatchExcel(){
           bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-family:monospace;font-size:9px;color:#555;vertical-align:top">'+r.mat+'</td>';
           bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-size:10px;font-weight:600;color:#1e293b;vertical-align:top">'+r.desc+custBadge+'</td>';
         }
-        bodyRows+=bcells(b46,'#854d0e')+bcells(b61,'#9a3412')+bcells(b90,'#991b1b');
+        bodyRows+=(show46?bcells(b46,'#854d0e'):'')+(show61?bcells(b61,'#9a3412'):'')+(show90?bcells(b90,'#991b1b'):'');
         if(isF) bodyRows+='<td rowspan="'+maxR+'" style="border:1px solid #ddd;padding:4px 6px;font-size:10px;vertical-align:top">'+reason+'</td>';
         bodyRows+='</tr>';
       }
     });
+    var theadCols1='';
+    if(show46) theadCols1+='<th colspan="5" style="background:#eab308;color:#fff">🟡 Batch 46-60 วัน</th>';
+    if(show61) theadCols1+='<th colspan="5" style="background:#f97316;color:#fff">🟠 Batch 61-90 วัน</th>';
+    if(show90) theadCols1+='<th colspan="5" style="background:#ef4444;color:#fff">🔴 Batch &gt;90 วัน</th>';
+    var theadCols2='';
+    if(show46) theadCols2+='<th style="background:#fef08a;color:#713f12">Batch No.</th><th style="background:#fef08a;color:#713f12">ลัง</th><th style="background:#fef08a;color:#713f12">วันหมดอายุ</th><th style="background:#fef08a;color:#713f12">อายุส่ง7-11/วัน</th><th style="background:#fef08a;color:#713f12">เหลืออายุ</th>';
+    if(show61) theadCols2+='<th style="background:#fed7aa;color:#7c2d12">Batch No.</th><th style="background:#fed7aa;color:#7c2d12">ลัง</th><th style="background:#fed7aa;color:#7c2d12">วันหมดอายุ</th><th style="background:#fed7aa;color:#7c2d12">อายุส่ง7-11/วัน</th><th style="background:#fed7aa;color:#7c2d12">เหลืออายุ</th>';
+    if(show90) theadCols2+='<th style="background:#fecaca;color:#7f1d1d">Batch No.</th><th style="background:#fecaca;color:#7f1d1d">ลัง</th><th style="background:#fecaca;color:#7f1d1d">วันหมดอายุ</th><th style="background:#fecaca;color:#7f1d1d">อายุส่ง7-11/วัน</th><th style="background:#fecaca;color:#7f1d1d">เหลืออายุ</th>';
+    var footCols='';
+    if(show46) footCols+='<td style="border:1px solid #ddd"></td><td style="border:1px solid #ddd;padding:5px 6px;text-align:right;color:#854d0e">'+totalLang46.toLocaleString()+'</td><td style="border:1px solid #ddd" colspan="3"></td>';
+    if(show61) footCols+='<td style="border:1px solid #ddd"></td><td style="border:1px solid #ddd;padding:5px 6px;text-align:right;color:#9a3412">'+totalLang61.toLocaleString()+'</td><td style="border:1px solid #ddd" colspan="3"></td>';
+    if(show90) footCols+='<td style="border:1px solid #ddd"></td><td style="border:1px solid #ddd;padding:5px 6px;text-align:right;color:#991b1b">'+totalLang90.toLocaleString()+'</td><td style="border:1px solid #ddd" colspan="3"></td>';
     const html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'+
     '<head><meta charset="utf-8"><style>body{font-family:Tahoma,Arial,sans-serif;font-size:11px}table{border-collapse:collapse}th{font-weight:700;padding:5px 6px;font-size:9px;border:1px solid #ccc}</style></head><body>'+
     '<table style="width:100%;margin-bottom:8px"><tr style="background:#1e3a5f">'+
-    '<td style="padding:10px 14px;font-size:14px;font-weight:800;color:#fff">📋 สินค้า 7-Eleven &amp; Makro เฝ้าระวัง (อาจเกินเกณฑ์การส่ง)</td>'+
+    '<td style="padding:10px 14px;font-size:14px;font-weight:800;color:#fff">📋 สินค้า 7-Eleven &amp; Makro เฝ้าระวัง (อาจเกินเกณฑ์การส่ง)<br><span style="font-size:10px;font-weight:400;color:#cbd5e1">กรอง: '+filterLabel+'</span></td>'+
     '<td style="padding:10px 14px;text-align:right;font-size:10px;color:#e2e8f0">วันที่: '+dateStr+'<br>รายการ: '+filt.length+' SKU<br>ส่งออก: '+new Date().toLocaleString('th-TH')+'</td>'+
     '</tr></table>'+
     '<table style="margin-bottom:10px"><tr>'+
-    '<td style="padding:8px 12px;background:#fef9c3;border:2px solid #eab308;min-width:130px"><div style="font-size:9px;font-weight:700;color:#713f12">🟡 Batch 46-60 วัน</div><div style="font-size:18px;font-weight:800;color:#854d0e">'+totalLang46.toLocaleString()+' ลัง</div></td>'+
-    '<td style="width:6px"></td>'+
-    '<td style="padding:8px 12px;background:#ffedd5;border:2px solid #f97316;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7c2d12">🟠 Batch 61-90 วัน</div><div style="font-size:18px;font-weight:800;color:#9a3412">'+totalLang61.toLocaleString()+' ลัง</div></td>'+
-    '<td style="width:6px"></td>'+
-    '<td style="padding:8px 12px;background:#fee2e2;border:2px solid #ef4444;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7f1d1d">🔴 Batch &gt;90 วัน</div><div style="font-size:18px;font-weight:800;color:#991b1b">'+totalLang90.toLocaleString()+' ลัง</div></td>'+
-    '<td style="width:6px"></td>'+
+    (show46?'<td style="padding:8px 12px;background:#fef9c3;border:2px solid #eab308;min-width:130px"><div style="font-size:9px;font-weight:700;color:#713f12">🟡 Batch 46-60 วัน</div><div style="font-size:18px;font-weight:800;color:#854d0e">'+totalLang46.toLocaleString()+' ลัง</div></td><td style="width:6px"></td>':'')+
+    (show61?'<td style="padding:8px 12px;background:#ffedd5;border:2px solid #f97316;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7c2d12">🟠 Batch 61-90 วัน</div><div style="font-size:18px;font-weight:800;color:#9a3412">'+totalLang61.toLocaleString()+' ลัง</div></td><td style="width:6px"></td>':'')+
+    (show90?'<td style="padding:8px 12px;background:#fee2e2;border:2px solid #ef4444;min-width:130px"><div style="font-size:9px;font-weight:700;color:#7f1d1d">🔴 Batch &gt;90 วัน</div><div style="font-size:18px;font-weight:800;color:#991b1b">'+totalLang90.toLocaleString()+' ลัง</div></td><td style="width:6px"></td>':'')+
     '<td style="padding:8px 12px;background:#f1f5f9;border:2px solid #94a3b8;min-width:130px"><div style="font-size:9px;font-weight:700;color:#475569">📦 รวมทั้งหมด</div><div style="font-size:18px;font-weight:800;color:#1e3a5f">'+(totalLang46+totalLang61+totalLang90).toLocaleString()+' ลัง</div></td>'+
     '</tr></table>'+
     '<table><thead>'+
     '<tr>'+
     '<th rowspan="2" style="background:#1e3a5f;color:#fff;text-align:left;width:110px">Material</th>'+
     '<th rowspan="2" style="background:#1e3a5f;color:#fff;text-align:left;width:160px">ชื่อสินค้า</th>'+
-    '<th colspan="4" style="background:#eab308;color:#fff">🟡 Batch 46-60 วัน</th>'+
-    '<th colspan="4" style="background:#f97316;color:#fff">🟠 Batch 61-90 วัน</th>'+
-    '<th colspan="4" style="background:#ef4444;color:#fff">🔴 Batch &gt;90 วัน</th>'+
+    theadCols1+
     '<th rowspan="2" style="background:#7c3aed;color:#fff;width:100px">✏️ หมายเหตุ</th>'+
     '</tr><tr>'+
-    '<th style="background:#fef08a;color:#713f12">Batch No.</th><th style="background:#fef08a;color:#713f12">ลัง</th><th style="background:#fef08a;color:#713f12">วันหมดอายุ</th><th style="background:#fef08a;color:#713f12">เหลืออายุ</th>'+
-    '<th style="background:#fed7aa;color:#7c2d12">Batch No.</th><th style="background:#fed7aa;color:#7c2d12">ลัง</th><th style="background:#fed7aa;color:#7c2d12">วันหมดอายุ</th><th style="background:#fed7aa;color:#7c2d12">เหลืออายุ</th>'+
-    '<th style="background:#fecaca;color:#7f1d1d">Batch No.</th><th style="background:#fecaca;color:#7f1d1d">ลัง</th><th style="background:#fecaca;color:#7f1d1d">วันหมดอายุ</th><th style="background:#fecaca;color:#7f1d1d">เหลืออายุ</th>'+
-    '</tr></thead><tbody>'+bodyRows+'</tbody></table>'+
-    '<div style="margin-top:10px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:6px">WH10 สินค้าเฝ้าระวัง | '+dateStr+'</div>'+
+    theadCols2+
+    '</tr></thead><tbody>'+bodyRows+'</tbody>'+
+    '<tfoot><tr style="background:#f1f5f9;font-weight:700">'+
+    '<td colspan="2" style="border:1px solid #ddd;padding:5px 6px">รวม '+filt.length+' รายการ</td>'+
+    footCols+
+    '<td style="border:1px solid #ddd"></td>'+
+    '</tr></tfoot>'+
+    '</table>'+
+    '<div style="margin-top:6px;font-size:9px;color:#94a3b8">เหลืออายุ: <span style="color:#16a34a;font-weight:700">■</span> &gt;14วัน &nbsp;<span style="color:#d97706;font-weight:700">■</span> 7-14วัน &nbsp;<span style="color:#dc2626;font-weight:700">■</span> &lt;7วัน</div>'+
+    '<div style="margin-top:10px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:6px">จัดทำโดย WH10 Dashboard · ส่งออก '+new Date().toLocaleString('th-TH')+'</div>'+
     '</body></html>';
     const blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
     const url=URL.createObjectURL(blob);
@@ -1750,8 +1401,8 @@ function exportWatchPDF(){
   if(ageFilter==='46') filt=filt.filter(r=>normB(r.b46).some(b=>b.lang>0));
   else if(ageFilter==='61') filt=filt.filter(r=>normB(r.b61).some(b=>b.lang>0));
   else if(ageFilter==='90') filt=filt.filter(r=>normB(r.b90).some(b=>b.lang>0));
-  if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||'').includes('7-Eleven'));
-  else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||'').includes('Makro'));
+  if(custFilter==='7-Eleven') filt=filt.filter(r=>(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'').includes('7-Eleven'));
+  else if(custFilter==='Makro') filt=filt.filter(r=>(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'').includes('Makro'));
 
   const REASONS=loadReasons();
   const dateStr=curDate||watchDate;
@@ -1767,7 +1418,8 @@ function exportWatchPDF(){
     var out=[];
     items.forEach(function(r,i){
       const bg=i%2===0?'#ffffff':'#f9fafb';
-      const custLabel=r.customer&&r.customer.includes('7-Eleven')?'7-11':r.customer&&r.customer.includes('Makro')?'Makro':'';
+      const _effCustX=(r.customer||(MASTER[r.mat]&&MASTER[r.mat].customer)||(MASTER[r.mat16]&&MASTER[r.mat16].customer)||'');
+      const custLabel=_effCustX.includes('7-Eleven')?'7-11':_effCustX.includes('Makro')?'Makro':'';
       const reason=REASONS[r.mat]||'';
       function bcells(b,color){
         if(!b||(!b.batch&&!b.lang)) return '<td colspan="5" style="text-align:center;color:#d1d5db;border:1px solid #e5e7eb">–</td>';
@@ -1908,6 +1560,7 @@ function exportWatchPDF(){
     </tr>
   </tfoot>
 </table>
+<div style="margin-top:10px;font-size:9px;color:#94a3b8">เหลืออายุ: <span style="color:#16a34a;font-weight:700">■</span> &gt;14วัน &nbsp;<span style="color:#d97706;font-weight:700">■</span> 7-14วัน &nbsp;<span style="color:#dc2626;font-weight:700">■</span> &lt;7วัน</div>
 <div class="footer">จัดทำโดย WH10 Dashboard · พิมพ์จาก WH10_Watch_Dashboard.html · ${new Date().toLocaleString('th-TH')}</div>
 
 
@@ -2336,7 +1989,7 @@ function fetchFromSheets(){
         if(cnt) cnt.textContent=watchRows.length+' รายการ';
         applyWatchCustCls();
         buildWatch();
-        buildUnclassifiedWatch();
+        notifyUnclassifiedWatch();
         saveWatchData();
       }
       if(old90Rows.length){
@@ -2442,6 +2095,7 @@ function testSheetsConnection(){
   }catch(e2){ console.warn('auto-history error:',e2); }
   try{ applyWatchCustCls(); }catch(e3){ console.warn('applyWatchCustCls error:',e3); }
   try{ buildWatch(); }catch(e4){ console.warn('buildWatch error:',e4); }
+  try{ buildUnclassifiedWatch(); if(window._unchWatchMats && window._unchWatchMats.length) openUncWatchModal(); }catch(e4c){ console.warn('buildUnclassifiedWatch error:',e4c); }
   try{ rebuildWatchAllFromHistory(); }catch(e4b){ console.warn('rebuildWatchAllFromHistory error:',e4b); }
   try{ buildOld(); }catch(e5){ console.warn('buildOld error:',e5); }
   try{ testSheetsConnection(); }catch(e6){ console.warn('testSheetsConnection error:',e6); }
